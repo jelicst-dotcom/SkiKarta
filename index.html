@@ -47,6 +47,8 @@
   .preview img { width:100%; border-radius:12px; display:block; box-shadow:0 8px 24px rgba(20,32,43,.18); }
   .msg { font-size:14px; margin-top:8px; }
   .err { color:#b4231b; }
+  select { width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); font:inherit; background:#fff; margin:6px 0 10px; }
+  h3.sub { margin:16px 0 8px; font-size:16px; }
   .hidden { display:none !important; }
   footer { text-align:center; font-size:11px; color:var(--muted); padding:10px 16px 30px; }
 </style>
@@ -91,9 +93,35 @@
       <button class="primary" id="makePoster">Napravi poster</button>
       <div class="preview hidden" id="preview"><img id="posterImg" alt="Poster dana"></div>
       <button class="dark hidden" id="savePoster">Spremi poster (PNG)</button>
+      <button class="ghost" id="zipDay">Svi posteri dana (ZIP)</button>
       <button class="ghost" id="savePdf">Puni izvještaj spust po spust (PDF)</button>
     </div>
     <div class="msg" id="outMsg"></div>
+  </div>
+
+  <div class="card" id="tripCard">
+    <h2><span class="step">+</span>Poster putovanja (više dana)</h2>
+    <p class="muted" style="margin:0 0 10px">Odaberi GPX zapise svih dana na istom skijalištu. Svaki dan se analizira zasebno, a poster ih spaja. Isti podaci daju i poster jedne staze kroz sve dane.</p>
+    <label class="file">Odaberi GPX zapise…<input id="tripGpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
+    <div class="files" id="tripFileList">Nijedna datoteka nije odabrana.</div>
+    <button class="primary" id="tripAnalyze" disabled>Analiziraj putovanje</button>
+    <div class="msg" id="tripMsg"></div>
+    <div class="hidden" id="tripBody">
+      <div class="head" style="margin-top:14px"><h3 id="tripResort"></h3><div class="muted" id="tripPeriod"></div></div>
+      <div class="tiles" id="tripTiles"></div>
+      <h3 class="sub">Poster putovanja</h3>
+      <div class="styles" id="tripStyles"></div>
+      <h3 class="sub">Poster jedne staze</h3>
+      <select id="tripPiste" aria-label="Staza"></select>
+      <div class="styles" id="pisteStyles"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="tripMake">Napravi poster</button>
+        <div class="preview hidden" id="tripPreview"><img id="tripImg" alt="Poster putovanja"></div>
+        <button class="dark hidden" id="tripSave">Spremi poster (PNG)</button>
+        <button class="ghost" id="zipTrip">Svi posteri putovanja i staze (ZIP)</button>
+      </div>
+      <div class="msg" id="tripOutMsg"></div>
+    </div>
   </div>
 </main>
 <footer>© OpenStreetMap contributors (ODbL) · OpenSkiData / OpenSkiMap · Skimap.org · Who’s On First · © Mapterhorn</footer>
@@ -201,6 +229,31 @@ json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Za
         return info;
       }
       if (cmd === 'icon') return JSON.parse(call('import json\njson.dumps(M.icon(_n))', { _n: extra.n }));
+      if (cmd === 'tripAnalyze') {
+        const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
+        return JSON.parse(call(`import json
+files = [(str(n), bytes(b.to_py())) for n, b in _files]
+json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Zagreb' }));
+      }
+      if (cmd === 'zipBegin') { call('M.zip_begin()'); return {}; }
+      if (cmd === 'zipAdd') {
+        return JSON.parse(extra.trip
+          ? call('import json\njson.dumps(M.zip_add_trip(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' })
+          : call('import json\njson.dumps(M.zip_add_day(_n))', { _n: extra.n }));
+      }
+      if (cmd === 'zipFinish') {
+        const out = call('M.zip_finish(_s)', { _s: extra.scope });
+        const name = out.get(0), bytes = out.get(1).toJs();
+        out.destroy();
+        return { name, bytes };
+      }
+      if (cmd === 'tripIcon') return JSON.parse(call('import json\njson.dumps(M.trip_icon(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' }));
+      if (cmd === 'tripPoster') {
+        const out = call('M.trip_poster(_k, _n, _p)', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' });
+        const name = out.get(0), bytes = out.get(1).toJs();
+        out.destroy();
+        return { name, bytes };
+      }
       const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : call('M.pdf(True)');
       const name = out.get(0), bytes = out.get(1).toJs();
       out.destroy();
@@ -211,11 +264,12 @@ json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Za
   }
 
   let files = [], busy = false, analyzed = false;
-  function updateButtons() {
+  var updateButtons = function () {
     $('analyze').disabled = !ready || busy || !files.length;
     $('makePoster').disabled = busy || !analyzed;
     $('savePdf').disabled = busy || !analyzed;
-  }
+    $('zipDay').disabled = busy || !analyzed;
+  };
   $('gpx').addEventListener('change', (e) => {
     files = Array.from(e.target.files || []);
     $('fileList').textContent = files.length ? files.map((f) => f.name).join(', ') : 'Nijedna datoteka nije odabrana.';
@@ -323,6 +377,151 @@ json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Za
     try { const r = await ask('pdf'); await save(r.name, r.bytes, 'application/pdf', $('outMsg')); }
     catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
     finally { busy = false; updateButtons(); }
+  });
+
+  // ---------------------------------------------------------------- svi posteri u jedan ZIP
+  // Poster po poster, da se vidi napredak; stil koji za ove podatke ne može nastati samo se preskoči.
+  async function zipAll(jobs, scope, msgEl) {
+    let done = 0, made = 0;
+    await ask('zipBegin');
+    for (const job of jobs) {
+      msgEl.textContent = `Crtam poster ${done + 1} od ${jobs.length}…`;
+      await pause(30);
+      const r = await ask('zipAdd', job);
+      done++; if (r.ok) made++;
+    }
+    if (!made) throw new Error('Nijedan poster nije nastao, pa nema što spremiti.');
+    msgEl.textContent = 'Sastavljam ZIP…';
+    await pause(30);
+    const z = await ask('zipFinish', { scope });
+    await save(z.name, z.bytes, 'application/zip', msgEl);
+    if (made < jobs.length) msgEl.textContent += ` (${made} od ${jobs.length} postera; ostali ne mogu nastati za ove podatke, vidi NAPOMENA.txt u ZIP-u)`;
+  }
+  $('zipDay').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('outMsg').className = 'msg';
+    iconQueue.length = 0;
+    const jobs = Array.from($('styles').querySelectorAll('.style')).map((b) => ({ n: +b.dataset.n }));
+    try { await zipAll(jobs, 'dan', $('outMsg')); }
+    catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
+    finally {
+      busy = false; updateButtons();
+      const left = Array.from($('styles').querySelectorAll('.style')).filter((b) => b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
+      if (left.length) { iconQueue = left; drawIcons(); }
+    }
+  });
+
+  // ---------------------------------------------------------------- poster putovanja i poster staze
+  let tripFiles = [], tripBusy = false, tripReady = false, tripPick = null, tripPoster = null, tripToken = 0, tripQueue = [];
+  function updateTrip() {
+    $('tripAnalyze').disabled = !ready || tripBusy || tripFiles.length < 2;
+    $('tripMake').disabled = tripBusy || !tripReady || !tripPick;
+    $('zipTrip').disabled = tripBusy || !tripReady;
+  }
+  const origUpdate = updateButtons;
+  updateButtons = function () { origUpdate(); updateTrip(); };
+  $('tripGpx').addEventListener('change', (e) => {
+    tripFiles = Array.from(e.target.files || []);
+    $('tripFileList').textContent = tripFiles.length ? tripFiles.map((f) => f.name).join(', ') : 'Nijedna datoteka nije odabrana.';
+    updateTrip();
+  });
+  $('tripAnalyze').addEventListener('click', async () => {
+    tripBusy = true; tripReady = false; tripPoster = null; tripToken++; tripQueue = []; updateTrip();
+    $('tripBody').classList.add('hidden'); $('tripMsg').className = 'msg';
+    $('tripMsg').textContent = 'Analiziram dane… (stranica može nekoliko minuta ne reagirati)';
+    try {
+      const payload = await Promise.all(tripFiles.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
+      const info = await ask('tripAnalyze', { files: payload, tz });
+      $('tripMsg').textContent = '';
+      showTrip(info); tripReady = true;
+    } catch (err) { $('tripMsg').className = 'msg err'; $('tripMsg').textContent = err.message; }
+    finally { tripBusy = false; updateTrip(); }
+  });
+  function tripTile(kind, s) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'style'; b.dataset.kind = kind; b.dataset.n = s.n;
+    const img = document.createElement('div'); img.className = 'img'; img.textContent = '…';
+    const lbl = document.createElement('div'); lbl.className = 'lbl'; const nm = document.createElement('span'); nm.textContent = s.name;
+    lbl.append(nm); b.append(img, lbl);
+    b.addEventListener('click', () => {
+      if (b.disabled) return;
+      tripPick = { kind, n: s.n };
+      document.querySelectorAll('#tripStyles .style, #pisteStyles .style').forEach((x) => x.classList.toggle('on', x === b));
+      tripPoster = null; $('tripPreview').classList.add('hidden'); $('tripSave').classList.add('hidden'); updateTrip();
+    });
+    return b;
+  }
+  function showTrip(info) {
+    $('tripResort').textContent = info.resort; $('tripPeriod').textContent = info.period + ' · ' + info.days.length + ' dana';
+    $('tripTiles').innerHTML = '';
+    const t = info.totals;
+    [[Math.round(t.descent).toLocaleString('hr-HR') + ' m', 'visinskog spusta'], [String(t.km).replace('.', ',') + ' km', 'na skijama'],
+     [String(t.runs), 'spustova'], [String(t.max_kmh).replace('.', ',') , 'km/h najveća brzina']].forEach(([v, l], i) => {
+      const d = document.createElement('div'); d.className = 'tile' + (i === 3 ? ' hot' : '');
+      const b = document.createElement('b'); b.textContent = v; const sp = document.createElement('span'); sp.textContent = l;
+      d.append(b, sp); $('tripTiles').append(d);
+    });
+    const box = $('tripStyles'); box.innerHTML = '';
+    info.styles.putovanje.forEach((s) => box.append(tripTile('putovanje', s)));
+    const sel = $('tripPiste'); sel.innerHTML = '';
+    info.pistes.forEach((p) => { const o = document.createElement('option'); o.value = p.name; o.textContent = `${p.name} (${p.passages}×, ${p.days} dana)`; sel.append(o); });
+    if (info.default_piste) sel.value = info.default_piste;
+    sel.dataset.styles = JSON.stringify(info.styles.staza);
+    sel.disabled = !info.pistes.length;
+    tripPick = { kind: 'putovanje', n: info.styles.putovanje[0].n };
+    box.firstChild.classList.add('on');
+    showPisteStyles();
+    $('tripBody').classList.remove('hidden');
+    tripToken++; tripQueue = [...box.querySelectorAll('.style')].map((el) => el);
+    drawTripIcons(tripToken);
+  }
+  function showPisteStyles() {
+    const sel = $('tripPiste'), box = $('pisteStyles'); box.innerHTML = '';
+    if (!sel.value) return;
+    JSON.parse(sel.dataset.styles || '[]').forEach((s) => box.append(tripTile('staza', s)));
+    if (tripPick && tripPick.kind === 'staza') { tripPick = null; updateTrip(); }
+  }
+  $('tripPiste').addEventListener('change', () => {
+    showPisteStyles(); tripToken++;
+    tripQueue = [...$('pisteStyles').querySelectorAll('.style')];
+    drawTripIcons(tripToken);
+  });
+  async function drawTripIcons(token) {
+    while (tripQueue.length && token === tripToken) {
+      if (tripBusy) { await pause(400); continue; }
+      const el = tripQueue.shift();
+      try {
+        const r = await ask('tripIcon', { kind: el.dataset.kind, n: +el.dataset.n, piste: $('tripPiste').value });
+        if (token !== tripToken) return;
+        const img = el.querySelector('.img');
+        if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; }
+        else { img.textContent = r.error || 'Nije moguće'; el.disabled = true; el.style.opacity = .5; }
+      } catch (_) { el.querySelector('.img').textContent = 'Greška'; }
+    }
+  }
+  $('tripMake').addEventListener('click', async () => {
+    if (!tripPick) return;
+    tripBusy = true; updateTrip(); tripToken++;   // poster ima prednost pred preostalim sličicama
+    const pending = [...document.querySelectorAll('#tripStyles .style, #pisteStyles .style')].filter((b) => b.querySelector('.img').textContent === '…');
+    $('tripOutMsg').className = 'msg'; $('tripOutMsg').textContent = 'Crtam poster…';
+    try {
+      tripPoster = await ask('tripPoster', { kind: tripPick.kind, n: tripPick.n, piste: $('tripPiste').value });
+      $('tripImg').src = URL.createObjectURL(new Blob([tripPoster.bytes], { type: 'image/png' }));
+      $('tripPreview').classList.remove('hidden'); $('tripSave').classList.remove('hidden'); $('tripOutMsg').textContent = '';
+    } catch (err) { $('tripOutMsg').className = 'msg err'; $('tripOutMsg').textContent = err.message; }
+    finally { tripBusy = false; updateTrip(); tripQueue = pending; drawTripIcons(tripToken); }
+  });
+  $('tripSave').addEventListener('click', () => tripPoster && save(tripPoster.name, tripPoster.bytes, 'image/png', $('tripOutMsg')));
+
+  $('zipTrip').addEventListener('click', async () => {
+    tripBusy = true; updateTrip(); tripToken++;
+    const pending = [...document.querySelectorAll('#tripStyles .style, #pisteStyles .style')].filter((b) => b.querySelector('.img').textContent === '…');
+    $('tripOutMsg').className = 'msg';
+    const piste = $('tripPiste').value;
+    const jobs = [...document.querySelectorAll('#tripStyles .style, #pisteStyles .style')]
+      .map((b) => ({ trip: true, kind: b.dataset.kind, n: +b.dataset.n, piste }));
+    try { await zipAll(jobs, 'putovanje', $('tripOutMsg')); }
+    catch (err) { $('tripOutMsg').className = 'msg err'; $('tripOutMsg').textContent = err.message; }
+    finally { tripBusy = false; updateTrip(); tripQueue = pending; drawTripIcons(tripToken); }
   });
 
   start();
