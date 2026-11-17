@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14202b">
+<title>SkiKarta – izvještaj i poster</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+  :root { --ink:#14202b; --muted:#5a6a79; --amber:#ffb020; --snow:#f3f5f7; --line:#dfe5eb; --card:#fff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--snow); color:var(--ink); }
+  header { background:var(--ink); color:#fff; padding:18px 18px 16px; }
+  header .brand { display:flex; align-items:center; gap:10px; font-weight:800; font-size:20px; letter-spacing:-.01em; }
+  header .brand svg { width:30px; height:30px; flex:none; }
+  header p { margin:6px 0 0; color:#a9b6c2; font-size:14px; }
+  main { max-width:760px; margin:0 auto; padding:14px 14px 40px; }
+  .card { background:var(--card); border-radius:18px; padding:16px; margin:12px 0; box-shadow:0 6px 20px rgba(20,32,43,.07); }
+  h2 { font-size:16px; margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+  h2 .step { background:var(--ink); color:#fff; border-radius:999px; width:24px; height:24px; display:inline-grid; place-items:center; font-size:13px; }
+  .muted { color:var(--muted); font-size:14px; line-height:1.4; }
+  .engine { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
+  .bar { flex:1; height:6px; background:var(--line); border-radius:6px; overflow:hidden; }
+  .bar > i { display:block; height:100%; width:0; background:var(--amber); transition:width .3s; }
+  button, .file { font:inherit; font-weight:600; border:0; border-radius:12px; padding:14px 16px; font-size:16px; cursor:pointer; width:100%; }
+  .primary { background:var(--amber); color:var(--ink); }
+  .dark { background:var(--ink); color:#fff; }
+  .ghost { background:#eef2f6; color:var(--ink); }
+  button:disabled { opacity:.45; cursor:default; }
+  .file { display:block; text-align:center; background:#eef2f6; position:relative; overflow:hidden; }
+  .file input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .files { margin:10px 0; font-size:14px; color:var(--muted); word-break:break-all; }
+  .row { display:grid; gap:10px; margin-top:10px; }
+  .head h3 { margin:0; font-size:26px; letter-spacing:-.02em; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .tile { background:var(--snow); border-radius:14px; padding:12px; }
+  .tile b { display:block; font-size:22px; font-weight:800; letter-spacing:-.02em; }
+  .tile span { font-size:13px; color:var(--muted); }
+  .tile.hot { background:var(--ink); color:#fff; } .tile.hot b { color:var(--amber); } .tile.hot span { color:#a9b6c2; }
+  .styles { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+  @media (min-width:600px) { .styles { grid-template-columns:repeat(3, 1fr); } }
+  .style { border:3px solid transparent; border-radius:12px; padding:0; background:var(--snow); text-align:left; overflow:hidden; cursor:pointer; }
+  .style.on { border-color:var(--amber); box-shadow:0 6px 16px rgba(255,176,32,.35); }
+  .style .img { aspect-ratio:16/9; background:#e6ebf0 center/cover no-repeat; display:grid; place-items:center; font-size:12px; color:var(--muted); }
+  .style .lbl { padding:6px 8px 8px; font-size:13px; font-weight:600; display:flex; gap:6px; align-items:center; }
+  .style .lbl i { font-style:normal; background:var(--ink); color:#fff; border-radius:999px; padding:1px 7px; font-size:11px; }
+  .preview img { width:100%; border-radius:12px; display:block; box-shadow:0 8px 24px rgba(20,32,43,.18); }
+  .msg { font-size:14px; margin-top:8px; }
+  .err { color:#b4231b; }
+  .hidden { display:none !important; }
+  footer { text-align:center; font-size:11px; color:var(--muted); padding:10px 16px 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 112 112" aria-hidden="true"><rect width="112" height="112" rx="28" fill="#ffffff22"/><path d="M32 22 L44 34 L48 46 L55 58 L66 66 L76 74 L80 84 L84 92" fill="none" stroke="#ffb020" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    SkiKarta
+  </div>
+  <p>Izvještaj i poster skijaškog dana iz GPX-a. Sve se računa na ovom uređaju.</p>
+</header>
+<main>
+  <div class="card">
+    <div class="engine"><span id="engineText">Pokrećem…</span><div class="bar"><i id="engineBar"></i></div></div>
+    <p class="muted" id="engineHint" style="margin:8px 0 0">Prvo otvaranje preuzima Python i karte (nekoliko desetaka MB) i može potrajati minutu. Poslije je brže.</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">1</span>GPX zapis dana</h2>
+    <label class="file">Odaberi GPX…<input id="gpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
+    <div class="files" id="fileList">Nijedna datoteka nije odabrana.</div>
+    <button class="primary" id="analyze" disabled>Analiziraj dan</button>
+    <div class="msg" id="analyzeMsg"></div>
+  </div>
+
+  <div class="card hidden" id="dayCard">
+    <div class="head"><h3 id="resort"></h3><div class="muted" id="day"></div></div>
+    <div class="tiles" id="tiles"></div>
+    <p class="muted" id="longest" style="margin:10px 0 0"></p>
+  </div>
+
+  <div class="card hidden" id="styleCard">
+    <h2><span class="step">2</span>Stil postera</h2>
+    <p class="muted" style="margin:0 0 10px">Sličice se crtaju iz tvog dana, jedna po jedna.</p>
+    <div class="styles" id="styles"></div>
+  </div>
+
+  <div class="card hidden" id="outCard">
+    <h2><span class="step">3</span>Poster i izvještaj</h2>
+    <div class="row">
+      <button class="primary" id="makePoster">Napravi poster</button>
+      <div class="preview hidden" id="preview"><img id="posterImg" alt="Poster dana"></div>
+      <button class="dark hidden" id="savePoster">Spremi poster (PNG)</button>
+      <button class="ghost" id="savePdf">Puni izvještaj spust po spust (PDF)</button>
+    </div>
+    <div class="msg" id="outMsg"></div>
+  </div>
+</main>
+<footer>© OpenStreetMap contributors (ODbL) · OpenSkiData / OpenSkiMap · Skimap.org · Who’s On First · © Mapterhorn</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let ready = false, chosen = 0, poster = null, iconQueue = [];
+  try { chosen = parseInt(localStorage.getItem('skikarta.style') || '0', 10) || 0; } catch (_) {}
+  const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.29.4/full/';
+  let py = null, lastStep = '', stamp = Date.now();
+
+  function setEngine(text, pct) { $('engineText').textContent = text; $('engineBar').style.width = (pct || 0) + '%'; }
+  function step(text, pct) { lastStep = text; stamp = Date.now(); setEngine(text, pct); }
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));   // da se poruka iscrta prije dugog računa
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script'); el.src = src;
+      el.onload = resolve; el.onerror = () => reject(new Error('Ne mogu učitati ' + src));
+      document.head.append(el);
+    });
+  }
+  let lastFetch = '';
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (url, opts) => {   // bilježi zadnju datoteku koju se preuzima (za poruku ako zapne)
+    lastFetch = String(url && url.url || url).split('/').pop();
+    return realFetch(url, opts);
+  };
+  function withTimeout(promise, ms, text) {
+    return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(text)), ms))]);
+  }
+  function pyError(err) {
+    const lines = String(err && err.message || err).split('\n').map((x) => x.trim()).filter(Boolean);
+    return lines.length ? lines[lines.length - 1] : 'Nepoznata greška';
+  }
+  // Python (Pyodide) radi u samoj stranici; korak po korak, da se vidi gdje bi zapelo
+  async function boot() {
+    step('Učitavam Python (1/4)…', 5);
+    if (typeof loadPyodide !== 'function') await loadScript(PYODIDE + 'pyodide.js');
+    step('Pokrećem Python (2/4)…', 15);
+    // dijagnostika: smije li stranica uopće preuzimati Pythonove datoteke s CDN-a
+    let probe;
+    try {
+      probe = await withTimeout(fetch(PYODIDE + 'pyodide-lock.json'), 20000, 'CDN ne odgovara 20 s');
+      if (!probe.ok) throw new Error('CDN je vratio ' + probe.status);
+    } catch (err) {
+      throw new Error('Stranica ne smije preuzeti Python s cdn.jsdelivr.net (' + (err && err.message || err) + ')');
+    }
+    py = await withTimeout(loadPyodide({ indexURL: PYODIDE }), 180000,
+      'Python se nije pokrenuo za 3 min; zadnja datoteka: ' + (lastFetch || '—'));
+    step('Učitavam numpy i Pillow (3/4)…', 35);
+    await py.loadPackage(['numpy', 'pillow', 'tzdata'], { messageCallback: (m) => { $('engineHint').textContent = m; } });
+    const list = await (await fetch('paketi.json')).json();
+    for (let i = 0; i < list.length; i++) {
+      step(`Učitavam karte i SkiKartu (4/4: ${i + 1}/${list.length})…`, 60 + Math.round(35 * i / list.length));
+      const res = await fetch(list[i]);
+      if (!res.ok) throw new Error('Nedostaje ' + list[i] + ' (' + res.status + ')');
+      py.globals.set('_pack', await res.text());
+      await pause(20);
+      py.runPython(`
+import base64, json, os, zlib
+for _p, _d in json.loads(_pack).items():
+    _t = os.path.join('/home/pyodide/app', _p)
+    os.makedirs(os.path.dirname(_t), exist_ok=True)
+    with open(_t, 'wb') as _f:
+        _f.write(zlib.decompress(base64.b64decode(_d)))
+del _pack`);
+    }
+    py.globals.set('reportProgress', (p) => {});
+    py.runPython(`
+import sys, os
+sys.path[:0] = ['/home/pyodide/app/skikarta', '/home/pyodide/app/site']
+os.chdir('/home/pyodide/app/skikarta')
+import skikarta_mobile as M`);
+    step('Spremno', 100);
+    ready = true; $('engineHint').classList.add('hidden'); updateButtons();
+  }
+  function start() {
+    boot().catch((err) => {
+      setEngine('Greška pri učitavanju: ' + pyError(err), 0);
+      $('engineHint').classList.remove('hidden');
+      $('engineHint').textContent = 'Korak: ' + lastStep + ' Provjeri internetsku vezu i ponovno otvori stranicu; ako se ponovi, pošalji ovu poruku.';
+    });
+    const watch = setInterval(() => {
+      if (ready) { clearInterval(watch); return; }
+      if (Date.now() - stamp > 90000) {
+        $('engineHint').classList.remove('hidden');
+        $('engineHint').textContent = 'Već 90 s nema napretka na koraku: ' + lastStep + ' Ako ostane ovako, pošalji snimku zaslona.';
+      }
+    }, 5000);
+  }
+  function call(code, vars) {
+    for (const [k, v] of Object.entries(vars || {})) py.globals.set(k, v);
+    return py.runPython(code);
+  }
+  async function ask(cmd, extra) {
+    await pause(60);
+    try {
+      if (cmd === 'analyze') {
+        const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
+        const info = JSON.parse(call(`import json
+files = [(str(n), bytes(b.to_py())) for n, b in _files]
+json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Zagreb' }));
+        info.styles = JSON.parse(call('import json\njson.dumps(M.styles())'));
+        return info;
+      }
+      if (cmd === 'icon') return JSON.parse(call('import json\njson.dumps(M.icon(_n))', { _n: extra.n }));
+      const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : call('M.pdf(True)');
+      const name = out.get(0), bytes = out.get(1).toJs();
+      out.destroy();
+      return { name, bytes };
+    } catch (err) {
+      throw new Error(pyError(err));
+    }
+  }
+
+  let files = [], busy = false, analyzed = false;
+  function updateButtons() {
+    $('analyze').disabled = !ready || busy || !files.length;
+    $('makePoster').disabled = busy || !analyzed;
+    $('savePdf').disabled = busy || !analyzed;
+  }
+  $('gpx').addEventListener('change', (e) => {
+    files = Array.from(e.target.files || []);
+    $('fileList').textContent = files.length ? files.map((f) => f.name).join(', ') : 'Nijedna datoteka nije odabrana.';
+    updateButtons();
+  });
+
+  $('analyze').addEventListener('click', async () => {
+    busy = true; analyzed = false; updateButtons(); poster = null;
+    $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = 'Analiziram dan…';
+    ['dayCard', 'styleCard', 'outCard', 'preview', 'savePoster'].forEach((id) => $(id).classList.add('hidden'));
+    try {
+      const payload = await Promise.all(files.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
+      $('analyzeMsg').textContent = 'Analiziram dan… (stranica može nekoliko desetaka sekundi ne reagirati)';
+      const info = await ask('analyze', { files: payload, tz });
+      showDay(info); analyzed = true;
+      $('analyzeMsg').textContent = '';
+      showStyles(info.styles);
+    } catch (err) {
+      $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
+    } finally { busy = false; updateButtons(); }
+  });
+
+  function showDay(info) {
+    $('resort').textContent = info.resort; $('day').textContent = info.day;
+    $('tiles').innerHTML = '';
+    info.stats.forEach((s, i) => {
+      const t = document.createElement('div'); t.className = 'tile' + (i === 4 ? ' hot' : '');
+      const b = document.createElement('b'); b.textContent = s.value; const sp = document.createElement('span'); sp.textContent = s.label;
+      t.append(b, sp); $('tiles').append(t);
+    });
+    $('longest').textContent = info.longest ? `Najdulji spust u ${info.longest.time}: ${info.longest.km} km` + (info.longest.pistes.length ? ' · ' + info.longest.pistes.slice(0, 3).join(' → ') : '') : '';
+    $('dayCard').classList.remove('hidden'); $('outCard').classList.remove('hidden');
+  }
+
+  function showStyles(list) {
+    const box = $('styles'); box.innerHTML = '';
+    if (!list.some((s) => s.n === chosen)) chosen = 0;
+    list.forEach((s) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'style' + (s.n === chosen ? ' on' : ''); b.dataset.n = s.n;
+      const img = document.createElement('div'); img.className = 'img'; img.textContent = '…';
+      const lbl = document.createElement('div'); lbl.className = 'lbl';
+      const num = document.createElement('i'); num.textContent = s.n; const nm = document.createElement('span'); nm.textContent = s.name;
+      lbl.append(num, nm); b.append(img, lbl);
+      b.addEventListener('click', () => {
+        if (b.disabled) return;
+        chosen = s.n; try { localStorage.setItem('skikarta.style', String(chosen)); } catch (_) {}
+        box.querySelectorAll('.style').forEach((x) => x.classList.toggle('on', x === b));
+        poster = null; $('preview').classList.add('hidden'); $('savePoster').classList.add('hidden');
+      });
+      box.append(b);
+    });
+    $('styleCard').classList.remove('hidden');
+    iconQueue = list.map((s) => s.n);
+    drawIcons();
+  }
+  async function drawIcons() {
+    while (iconQueue.length) {
+      const n = iconQueue.shift();
+      const el = $('styles').querySelector(`[data-n="${n}"]`);
+      try {
+        const r = await ask('icon', { n });
+        if (!el) continue;
+        const img = el.querySelector('.img');
+        if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; }
+        else { img.textContent = 'Nije moguće za ovaj dan'; el.disabled = true; el.style.opacity = .5; }
+      } catch (_) { if (el) el.querySelector('.img').textContent = 'Greška'; }
+    }
+  }
+
+  let downloads = null;
+  try { window.claude && window.claude.use && window.claude.use('downloads').then((d) => { downloads = d; }).catch(() => {}); } catch (_) {}
+  async function save(name, bytes, mime, msgEl) {
+    msgEl.className = 'msg';
+    if (downloads) {
+      try { await downloads.save({ filename: name, data: new Blob([bytes], { type: mime }) }); msgEl.textContent = 'Spremljeno: ' + name; return; }
+      catch (err) { if (err && err.code === 'declined') { msgEl.textContent = 'Spremanje otkazano.'; return; } }
+    }
+    try {
+      const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      msgEl.textContent = 'Preuzimanje: ' + name;
+    } catch (_) { msgEl.className = 'msg err'; msgEl.textContent = 'Ovaj preglednik ne dopušta spremanje datoteke.'; }
+  }
+
+  $('makePoster').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('outMsg').className = 'msg'; $('outMsg').textContent = 'Crtam poster…';
+    iconQueue.length = 0;   // poster ima prednost pred preostalim sličicama
+    try {
+      poster = await ask('poster', { n: chosen });
+      const url = URL.createObjectURL(new Blob([poster.bytes], { type: 'image/png' }));
+      $('posterImg').src = url; $('preview').classList.remove('hidden'); $('savePoster').classList.remove('hidden');
+      $('outMsg').textContent = '';
+    } catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
+    finally {
+      busy = false; updateButtons();
+      const left = Array.from($('styles').querySelectorAll('.style')).filter((b) => b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
+      if (left.length) { iconQueue = left; drawIcons(); }
+    }
+  });
+  $('savePoster').addEventListener('click', () => poster && save(poster.name, poster.bytes, 'image/png', $('outMsg')));
+  $('savePdf').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('outMsg').className = 'msg'; $('outMsg').textContent = 'Pišem PDF…';
+    try { const r = await ask('pdf'); await save(r.name, r.bytes, 'application/pdf', $('outMsg')); }
+    catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>
