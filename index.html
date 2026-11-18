@@ -48,6 +48,7 @@
   @media (min-width:600px) { .styles { grid-template-columns:repeat(3, 1fr); } }
   .style { border:3px solid transparent; border-radius:12px; padding:0; background:var(--snow); text-align:left; overflow:hidden; cursor:pointer; }
   .style.on { border-color:var(--amber); box-shadow:0 6px 16px rgba(255,176,32,.35); }
+  .styles.photo .style .img { aspect-ratio:4/5; }
   .style .img { aspect-ratio:16/9; background:#e6ebf0 center/contain no-repeat; display:grid; place-items:center; font-size:12px; color:var(--muted); }
   .style .lbl { padding:6px 8px 8px; font-size:13px; font-weight:600; display:flex; gap:6px; align-items:center; }
   .style .lbl i { font-style:normal; background:var(--ink); color:#fff; border-radius:999px; padding:1px 7px; font-size:11px; }
@@ -100,6 +101,22 @@
     <h2><span class="step">2</span><span data-i="h2">Stil postera</span></h2>
     <p class="muted" data-i="iconsNote" style="margin:0 0 10px">Sličice se crtaju iz tvog dana, jedna po jedna.</p>
     <div class="styles" id="styles"></div>
+  </div>
+
+  <div class="card hidden" id="photoCard">
+    <h2><span class="step">+</span><span data-i="hPhoto">Poster s fotografijom (po želji)</span></h2>
+    <p class="muted" data-i="photoNote" style="margin:0 0 10px">Priloži jednu fotografiju s tog dana i izaberi jedan od 15 stilova. Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.</p>
+    <label class="file"><span data-i="pickPhoto">Priloži fotografiju…</span><input id="photo" type="file" accept="image/jpeg,image/png,image/*"></label>
+    <p class="muted hidden" id="photoInfo" style="margin:10px 0"></p>
+    <div class="styles photo hidden" id="photoStyles"></div>
+    <div class="row hidden" id="photoRow" style="margin-top:14px">
+      <button class="primary" id="photoMake" data-i="makePhoto">Napravi poster s fotografijom</button>
+      <div class="preview hidden" id="photoPreview"><img id="photoImg" data-alt="altPhoto" alt="Poster s fotografijom"></div>
+      <button class="dark hidden" id="photoSave" data-i="savePng">Spremi poster (PNG)</button>
+      <button class="ghost" id="zipPhoto" data-i="zipPhoto">Svi posteri s fotografijom (ZIP)</button>
+      <button class="ghost" id="photoRemove" data-i="removePhoto">Makni fotografiju</button>
+    </div>
+    <div class="msg" id="photoMsg"></div>
   </div>
 
   <div class="card hidden" id="outCard">
@@ -176,6 +193,9 @@
       tripAnalyzing: 'Analiziram dane… (stranica može nekoliko minuta ne reagirati)',
       daysN: '{n} dana', pisteOpt: '{name} ({p}×, {d} dana)',
       tVert: 'visinskog spusta', tSki: 'na skijama', tRuns: 'spustova', tTop: 'km/h najveća brzina',
+      hPhoto: 'Poster s fotografijom (po želji)', photoNote: 'Priloži jednu fotografiju s tog dana i izaberi jedan od 15 stilova. Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.',
+      pickPhoto: 'Priloži fotografiju…', makePhoto: 'Napravi poster s fotografijom', zipPhoto: 'Svi posteri s fotografijom (ZIP)',
+      removePhoto: 'Makni fotografiju', altPhoto: 'Poster s fotografijom', readingPhoto: 'Čitam fotografiju…',
     },
     en: {
       title: 'SkiKarta – report and poster',
@@ -207,6 +227,9 @@
       tripAnalyzing: 'Analysing the days… (the page may not respond for a few minutes)',
       daysN: '{n} days', pisteOpt: '{name} ({p}×, {d} days)',
       tVert: 'vertical descent', tSki: 'on skis', tRuns: 'runs', tTop: 'km/h top speed',
+      hPhoto: 'Poster with a photo (optional)', photoNote: 'Attach one photo from that day and pick one of 15 styles. If the photo has a capture time, the poster marks where it was taken.',
+      pickPhoto: 'Attach a photo…', makePhoto: 'Make the photo poster', zipPhoto: 'All photo posters (ZIP)',
+      removePhoto: 'Remove the photo', altPhoto: 'Poster with a photo', readingPhoto: 'Reading the photo…',
     },
   };
   let lang = 'hr';
@@ -366,6 +389,16 @@ json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Za
         return info;
       }
       if (cmd === 'icon') return JSON.parse(call('import json\njson.dumps(M.icon(_n))', { _n: extra.n }));
+      if (cmd === 'photoSet') return JSON.parse(call('import json\njson.dumps(M.photo_set(bytes(_ph.to_py())))', { _ph: new Uint8Array(extra.buffer) }));
+      if (cmd === 'photoState') return JSON.parse(call('import json\njson.dumps(M.photo_state())'));
+      if (cmd === 'photoClear') { call('M.photo_clear()'); return {}; }
+      if (cmd === 'photoIcon') return JSON.parse(call('import json\njson.dumps(M.photo_icon(_n))', { _n: extra.n }));
+      if (cmd === 'photoPoster') {
+        const out = call('M.photo_poster(_n)', { _n: extra.n });
+        const name = out.get(0), bytes = out.get(1).toJs();
+        out.destroy();
+        return { name, bytes };
+      }
       if (cmd === 'tripAnalyze') {
         const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
         return JSON.parse(call(`import json
@@ -375,6 +408,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       if (cmd === 'lang') return JSON.parse(call('import json\njson.dumps(M.switch_lang(_l))', { _l: extra.lang }));
       if (cmd === 'zipBegin') { call('M.zip_begin()'); return {}; }
       if (cmd === 'zipAdd') {
+        if (extra.photo) return JSON.parse(call('import json\njson.dumps(M.zip_add_photo(_n))', { _n: extra.n }));
         return JSON.parse(extra.trip
           ? call('import json\njson.dumps(M.zip_add_trip(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' })
           : call('import json\njson.dumps(M.zip_add_day(_n))', { _n: extra.n }));
@@ -402,11 +436,15 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   }
 
   let files = [], busy = false, analyzed = false, lastDay = null, lastTrip = null;
+  let photoLoaded = false, photoChosen = 1, photoQueue = [], photoOut = null;
+  try { photoChosen = parseInt(localStorage.getItem('skikarta.photoStyle') || '1', 10) || 1; } catch (_) {}
   var updateButtons = function () {
     $('analyze').disabled = !ready || busy || !files.length;
     $('makePoster').disabled = busy || !analyzed;
     $('savePdf').disabled = busy || !analyzed;
     $('zipDay').disabled = busy || !analyzed;
+    $('photo').disabled = busy || !analyzed;
+    ['photoMake', 'zipPhoto', 'photoRemove'].forEach((id) => { $(id).disabled = busy || !analyzed || !photoLoaded; });
   };
   $('gpx').addEventListener('change', (e) => {
     files = Array.from(e.target.files || []);
@@ -418,7 +456,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   $('analyze').addEventListener('click', async () => {
     busy = true; analyzed = false; updateButtons(); poster = null;
     $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = t('analyzing');
-    ['dayCard', 'styleCard', 'outCard', 'preview', 'savePoster'].forEach((id) => $(id).classList.add('hidden'));
+    ['dayCard', 'styleCard', 'outCard', 'preview', 'savePoster', 'photoCard', 'photoPreview', 'photoSave'].forEach((id) => $(id).classList.add('hidden'));
+    photoOut = null;
     try {
       const payload = await Promise.all(files.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
@@ -427,6 +466,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       lastDay = info; showDay(info); analyzed = true;
       $('analyzeMsg').textContent = '';
       showStyles(info.styles);
+      $('photoCard').classList.remove('hidden');
+      if (photoLoaded) showPhoto(await ask('photoState'));
     } catch (err) {
       $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
     } finally { busy = false; updateButtons(); }
@@ -523,6 +564,89 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     try { const r = await ask('pdf'); await save(r.name, r.bytes, 'application/pdf', $('outMsg')); }
     catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
     finally { busy = false; updateButtons(); }
+  });
+
+  // ---------------------------------------------------------------- 3.0: poster s fotografijom
+  function showPhoto(state) {
+    $('photoInfo').textContent = state.text || ''; $('photoInfo').classList.remove('hidden');
+    const box = $('photoStyles'); box.innerHTML = '';
+    if (!state.styles.some((s) => s.n === photoChosen)) photoChosen = 1;
+    state.styles.forEach((s) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'style' + (s.n === photoChosen ? ' on' : ''); b.dataset.n = s.n;
+      const img = document.createElement('div'); img.className = 'img'; img.textContent = '…';
+      const lbl = document.createElement('div'); lbl.className = 'lbl';
+      const num = document.createElement('i'); num.textContent = s.n; const nm = document.createElement('span'); nm.textContent = s.name;
+      lbl.append(num, nm); b.append(img, lbl);
+      b.addEventListener('click', () => {
+        if (b.disabled) return;
+        photoChosen = s.n; try { localStorage.setItem('skikarta.photoStyle', String(photoChosen)); } catch (_) {}
+        box.querySelectorAll('.style').forEach((x) => x.classList.toggle('on', x === b));
+        photoOut = null; $('photoPreview').classList.add('hidden'); $('photoSave').classList.add('hidden');
+      });
+      box.append(b);
+    });
+    box.classList.remove('hidden'); $('photoRow').classList.remove('hidden');
+    photoQueue = state.styles.map((s) => s.n);
+    drawPhotoIcons();
+  }
+  let photoDrawing = false;
+  async function drawPhotoIcons() {
+    if (photoDrawing) return;
+    photoDrawing = true;
+    try {
+      while (photoQueue.length) {
+        const n = photoQueue.shift();
+        const el = $('photoStyles').querySelector(`[data-n="${n}"]`);
+        try {
+          const r = await ask('photoIcon', { n });
+          if (!el || !photoLoaded) continue;
+          const img = el.querySelector('.img');
+          if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; }
+          else { img.textContent = t('noIcon'); el.disabled = true; el.style.opacity = .5; }
+        } catch (_) { if (el) el.querySelector('.img').textContent = t('iconErr'); }
+      }
+    } finally { photoDrawing = false; }
+  }
+  const leftPhotoIcons = () => Array.from($('photoStyles').querySelectorAll('.style')).filter((b) => b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
+  $('photo').addEventListener('change', async (e) => {
+    const file = (e.target.files || [])[0];
+    if (!file) return;
+    busy = true; updateButtons(); $('photoMsg').className = 'msg'; $('photoMsg').textContent = t('readingPhoto');
+    photoOut = null; $('photoPreview').classList.add('hidden'); $('photoSave').classList.add('hidden');
+    try {
+      const state = await ask('photoSet', { buffer: await file.arrayBuffer() });
+      photoLoaded = true; $('photoMsg').textContent = '';
+      busy = false; updateButtons();
+      showPhoto(state);
+    } catch (err) { $('photoMsg').className = 'msg err'; $('photoMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); e.target.value = ''; }
+  });
+  $('photoMake').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('photoMsg').className = 'msg'; $('photoMsg').textContent = t('drawing');
+    photoQueue.length = 0;
+    try {
+      photoOut = await ask('photoPoster', { n: photoChosen });
+      $('photoImg').src = URL.createObjectURL(new Blob([photoOut.bytes], { type: 'image/png' }));
+      $('photoPreview').classList.remove('hidden'); $('photoSave').classList.remove('hidden');
+      $('photoMsg').textContent = '';
+    } catch (err) { $('photoMsg').className = 'msg err'; $('photoMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); const left = leftPhotoIcons(); if (left.length) { photoQueue = left; drawPhotoIcons(); } }
+  });
+  $('photoSave').addEventListener('click', () => photoOut && save(photoOut.name, photoOut.bytes, 'image/png', $('photoMsg')));
+  $('zipPhoto').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('photoMsg').className = 'msg';
+    photoQueue.length = 0;
+    const jobs = Array.from($('photoStyles').querySelectorAll('.style')).map((b) => ({ n: +b.dataset.n, photo: true }));
+    try { await zipAll(jobs, 'foto', $('photoMsg')); }
+    catch (err) { $('photoMsg').className = 'msg err'; $('photoMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); const left = leftPhotoIcons(); if (left.length) { photoQueue = left; drawPhotoIcons(); } }
+  });
+  $('photoRemove').addEventListener('click', async () => {
+    photoQueue.length = 0; photoLoaded = false; photoOut = null;
+    try { await ask('photoClear'); } catch (_) {}
+    ['photoInfo', 'photoStyles', 'photoRow', 'photoPreview', 'photoSave'].forEach((id) => $(id).classList.add('hidden'));
+    $('photoStyles').innerHTML = ''; $('photoMsg').textContent = '';
+    updateButtons();
   });
 
   // ---------------------------------------------------------------- svi posteri u jedan ZIP
@@ -679,8 +803,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     try { localStorage.setItem('skikarta.lang', lang); } catch (_) {}
     applyLang();
     // postera nacrtanih na prethodnom jeziku više nema; sličice se crtaju ponovno
-    poster = null; tripPoster = null;
-    ['preview', 'savePoster', 'tripPreview', 'tripSave'].forEach((id) => $(id).classList.add('hidden'));
+    poster = null; tripPoster = null; photoOut = null; photoQueue = [];
+    ['preview', 'savePoster', 'tripPreview', 'tripSave', 'photoPreview', 'photoSave'].forEach((id) => $(id).classList.add('hidden'));
     $('outMsg').textContent = ''; $('tripOutMsg').textContent = '';
     if (!ready) return;   // Python dobiva jezik pri pokretanju
     iconQueue.length = 0; tripToken++; tripQueue = [];
@@ -697,6 +821,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       }
       busy = false; tripBusy = false; updateButtons();
       if (r.styles) showStyles(r.styles);
+      if (r.photo && photoLoaded) showPhoto(r.photo);
     } catch (err) {
       $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
     } finally { busy = false; tripBusy = false; updateButtons(); }
