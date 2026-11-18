@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="hr" id="root">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14202b">
-<title>SkiKarta – izvještaj i poster</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<title data-i="title">SkiKarta – izvještaj i poster</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="ikona-192.png">
+<link rel="apple-touch-icon" href="ikona-192.png">
+<link rel="stylesheet" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
   :root { --ink:#14202b; --muted:#5a6a79; --amber:#ffb020; --snow:#f3f5f7; --line:#dfe5eb; --card:#fff; }
   * { box-sizing: border-box; }
@@ -36,6 +39,10 @@
   .tile { background:var(--snow); border-radius:14px; padding:12px; }
   .tile b { display:block; font-size:22px; font-weight:800; letter-spacing:-.02em; }
   .tile span { font-size:13px; color:var(--muted); }
+  .extras summary { cursor:pointer; font-weight:600; font-size:15px; margin-top:12px; }
+  .extras .xr { display:grid; grid-template-columns:1fr; gap:2px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .extras .xr b { font-size:13px; color:var(--muted); font-weight:600; }
+  .extras .xr span { font-size:15px; }
   .tile.hot { background:var(--ink); color:#fff; } .tile.hot b { color:var(--amber); } .tile.hot span { color:#a9b6c2; }
   .styles { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
   @media (min-width:600px) { .styles { grid-template-columns:repeat(3, 1fr); } }
@@ -50,6 +57,9 @@
   select { width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); font:inherit; background:#fff; margin:6px 0 10px; }
   h3.sub { margin:16px 0 8px; font-size:16px; }
   .hidden { display:none !important; }
+  .lang { display:flex; gap:0; margin-left:auto; border:1px solid #ffffff44; border-radius:999px; overflow:hidden; }
+  .lang button { width:auto; background:transparent; color:#fff; padding:5px 12px; font-size:13px; font-weight:700; border-radius:0; }
+  .lang button.on { background:var(--amber); color:var(--ink); }
   footer { text-align:center; font-size:11px; color:var(--muted); padding:10px 16px 30px; }
 </style>
 </head>
@@ -58,20 +68,24 @@
   <div class="brand">
     <svg viewBox="0 0 112 112" aria-hidden="true"><rect width="112" height="112" rx="28" fill="#ffffff22"/><path d="M32 22 L44 34 L48 46 L55 58 L66 66 L76 74 L80 84 L84 92" fill="none" stroke="#ffb020" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
     SkiKarta
+    <div class="lang" role="group" aria-label="Jezik / Language">
+      <button type="button" id="langHr" data-lang="hr">HR</button><button type="button" id="langEn" data-lang="en">EN</button>
+    </div>
   </div>
-  <p>Izvještaj i poster skijaškog dana iz GPX-a. Sve se računa na ovom uređaju.</p>
+  <p data-i="sub">Izvještaj i poster skijaškog dana iz GPX-a. Sve se računa na ovom uređaju.</p>
 </header>
 <main>
   <div class="card">
-    <div class="engine"><span id="engineText">Pokrećem…</span><div class="bar"><i id="engineBar"></i></div></div>
+    <div class="engine"><span id="engineText"></span><div class="bar"><i id="engineBar"></i></div></div>
     <p class="muted" id="engineHint" style="margin:8px 0 0">Prvo otvaranje preuzima Python i karte (nekoliko desetaka MB) i može potrajati minutu. Poslije je brže.</p>
+    <p class="muted hidden" id="offlineNote" style="margin:8px 0 0"></p>
   </div>
 
   <div class="card">
-    <h2><span class="step">1</span>GPX zapis dana</h2>
-    <label class="file">Odaberi GPX…<input id="gpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
-    <div class="files" id="fileList">Nijedna datoteka nije odabrana.</div>
-    <button class="primary" id="analyze" disabled>Analiziraj dan</button>
+    <h2><span class="step">1</span><span data-i="h1">GPX zapis dana</span></h2>
+    <label class="file"><span data-i="pick">Odaberi GPX…</span><input id="gpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
+    <div class="files" id="fileList"></div>
+    <button class="primary" id="analyze" data-i="analyze" disabled>Analiziraj dan</button>
     <div class="msg" id="analyzeMsg"></div>
   </div>
 
@@ -79,46 +93,47 @@
     <div class="head"><h3 id="resort"></h3><div class="muted" id="day"></div></div>
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="longest" style="margin:10px 0 0"></p>
+    <details class="extras hidden" id="extrasBox"><summary data-i="extras">Dodatno o danu</summary><div id="extras"></div></details>
   </div>
 
   <div class="card hidden" id="styleCard">
-    <h2><span class="step">2</span>Stil postera</h2>
-    <p class="muted" style="margin:0 0 10px">Sličice se crtaju iz tvog dana, jedna po jedna.</p>
+    <h2><span class="step">2</span><span data-i="h2">Stil postera</span></h2>
+    <p class="muted" data-i="iconsNote" style="margin:0 0 10px">Sličice se crtaju iz tvog dana, jedna po jedna.</p>
     <div class="styles" id="styles"></div>
   </div>
 
   <div class="card hidden" id="outCard">
-    <h2><span class="step">3</span>Poster i izvještaj</h2>
+    <h2><span class="step">3</span><span data-i="h3">Poster i izvještaj</span></h2>
     <div class="row">
-      <button class="primary" id="makePoster">Napravi poster</button>
-      <div class="preview hidden" id="preview"><img id="posterImg" alt="Poster dana"></div>
-      <button class="dark hidden" id="savePoster">Spremi poster (PNG)</button>
-      <button class="ghost" id="zipDay">Svi posteri dana (ZIP)</button>
-      <button class="ghost" id="savePdf">Puni izvještaj spust po spust (PDF)</button>
+      <button class="primary" id="makePoster" data-i="make">Napravi poster</button>
+      <div class="preview hidden" id="preview"><img id="posterImg" data-alt="altDay" alt="Poster dana"></div>
+      <button class="dark hidden" id="savePoster" data-i="savePng">Spremi poster (PNG)</button>
+      <button class="ghost" id="zipDay" data-i="zipDay">Svi posteri dana (ZIP)</button>
+      <button class="ghost" id="savePdf" data-i="pdf">Puni izvještaj spust po spust (PDF)</button>
     </div>
     <div class="msg" id="outMsg"></div>
   </div>
 
   <div class="card" id="tripCard">
-    <h2><span class="step">+</span>Poster putovanja (više dana)</h2>
-    <p class="muted" style="margin:0 0 10px">Odaberi GPX zapise svih dana na istom skijalištu. Svaki dan se analizira zasebno, a poster ih spaja. Isti podaci daju i poster jedne staze kroz sve dane.</p>
-    <label class="file">Odaberi GPX zapise…<input id="tripGpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
-    <div class="files" id="tripFileList">Nijedna datoteka nije odabrana.</div>
-    <button class="primary" id="tripAnalyze" disabled>Analiziraj putovanje</button>
+    <h2><span class="step">+</span><span data-i="hTrip">Poster putovanja (više dana)</span></h2>
+    <p class="muted" data-i="tripNote" style="margin:0 0 10px">Odaberi GPX zapise svih dana na istom skijalištu. Svaki dan se analizira zasebno, a poster ih spaja. Isti podaci daju i poster jedne staze kroz sve dane.</p>
+    <label class="file"><span data-i="pickTrip">Odaberi GPX zapise…</span><input id="tripGpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
+    <div class="files" id="tripFileList"></div>
+    <button class="primary" id="tripAnalyze" data-i="tripAnalyze" disabled>Analiziraj putovanje</button>
     <div class="msg" id="tripMsg"></div>
     <div class="hidden" id="tripBody">
       <div class="head" style="margin-top:14px"><h3 id="tripResort"></h3><div class="muted" id="tripPeriod"></div></div>
       <div class="tiles" id="tripTiles"></div>
-      <h3 class="sub">Poster putovanja</h3>
+      <h3 class="sub" data-i="subTrip">Poster putovanja</h3>
       <div class="styles" id="tripStyles"></div>
-      <h3 class="sub">Poster jedne staze</h3>
-      <select id="tripPiste" aria-label="Staza"></select>
+      <h3 class="sub" data-i="subPiste">Poster jedne staze</h3>
+      <select id="tripPiste" data-aria="piste" aria-label="Staza"></select>
       <div class="styles" id="pisteStyles"></div>
       <div class="row" style="margin-top:14px">
-        <button class="primary" id="tripMake">Napravi poster</button>
-        <div class="preview hidden" id="tripPreview"><img id="tripImg" alt="Poster putovanja"></div>
-        <button class="dark hidden" id="tripSave">Spremi poster (PNG)</button>
-        <button class="ghost" id="zipTrip">Svi posteri putovanja i staze (ZIP)</button>
+        <button class="primary" id="tripMake" data-i="make">Napravi poster</button>
+        <div class="preview hidden" id="tripPreview"><img id="tripImg" data-alt="altTrip" alt="Poster putovanja"></div>
+        <button class="dark hidden" id="tripSave" data-i="savePng">Spremi poster (PNG)</button>
+        <button class="ghost" id="zipTrip" data-i="zipTrip">Svi posteri putovanja i staze (ZIP)</button>
       </div>
       <div class="msg" id="tripOutMsg"></div>
     </div>
@@ -129,18 +144,112 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  // ---------------------------------------------------------------- jezik (hrvatski / engleski)
+  const UI = {
+    hr: {
+      title: 'SkiKarta – izvještaj i poster',
+      sub: 'Izvještaj i poster skijaškog dana iz GPX-a. Sve se računa na ovom uređaju.',
+      offOk: 'Spremljeno za rad bez interneta: sljedeći put se otvara i bez veze (GPX-ovi se i dalje obrađuju samo na ovom uređaju).',
+      hint: 'Prvo otvaranje preuzima Python i karte (nekoliko desetaka MB) i može potrajati minutu. Poslije je brže.',
+      h1: 'GPX zapis dana', pick: 'Odaberi GPX…', noFiles: 'Nijedna datoteka nije odabrana.', analyze: 'Analiziraj dan',
+      h2: 'Stil postera', iconsNote: 'Sličice se crtaju iz tvog dana, jedna po jedna.',
+      h3: 'Poster i izvještaj', make: 'Napravi poster', altDay: 'Poster dana', savePng: 'Spremi poster (PNG)',
+      zipDay: 'Svi posteri dana (ZIP)', pdf: 'Puni izvještaj spust po spust (PDF)',
+      hTrip: 'Poster putovanja (više dana)',
+      tripNote: 'Odaberi GPX zapise svih dana na istom skijalištu. Svaki dan se analizira zasebno, a poster ih spaja. Isti podaci daju i poster jedne staze kroz sve dane.',
+      pickTrip: 'Odaberi GPX zapise…', tripAnalyze: 'Analiziraj putovanje', subTrip: 'Poster putovanja', subPiste: 'Poster jedne staze',
+      piste: 'Staza', altTrip: 'Poster putovanja', zipTrip: 'Svi posteri putovanja i staze (ZIP)',
+      starting: 'Pokrećem…', loadPy: 'Učitavam Python (1/4)…', startPy: 'Pokrećem Python (2/4)…',
+      loadPkgs: 'Učitavam numpy i Pillow (3/4)…', loadMaps: 'Učitavam karte i SkiKartu (4/4: {i}/{n})…', ready: 'Spremno',
+      loadErr: 'Greška pri učitavanju: ', stepIs: 'Korak: ',
+      stepHint: ' Provjeri internetsku vezu i ponovno otvori stranicu; ako se ponovi, pošalji ovu poruku.',
+      stalled: 'Već 90 s nema napretka na koraku: ', stalledHint: ' Ako ostane ovako, pošalji snimku zaslona.',
+      cannotLoad: 'Ne mogu učitati ', unknownErr: 'Nepoznata greška', cdnSilent: 'CDN ne odgovara 20 s',
+      cdnStatus: 'CDN je vratio ', cdnBlocked: 'Stranica ne smije preuzeti Python s cdn.jsdelivr.net (',
+      pyTimeout: 'Python se nije pokrenuo za 3 min; zadnja datoteka: ', missing: 'Nedostaje ',
+      analyzing: 'Analiziram dan…', analyzingSlow: 'Analiziram dan… (stranica može nekoliko desetaka sekundi ne reagirati)',
+      extras: 'Dodatno o danu', longest: 'Najdulji spust u {time}: {km} km', noIcon: 'Nije moguće za ovaj dan', iconErr: 'Greška', notPossible: 'Nije moguće',
+      saved: 'Spremljeno: ', saveCancelled: 'Spremanje otkazano.', downloading: 'Preuzimanje: ',
+      noSave: 'Ovaj preglednik ne dopušta spremanje datoteke.', drawing: 'Crtam poster…', writingPdf: 'Pišem PDF…',
+      drawingN: 'Crtam poster {a} od {b}…', nothingMade: 'Nijedan poster nije nastao, pa nema što spremiti.',
+      zipping: 'Sastavljam ZIP…', zipPartial: ' ({a} od {b} postera; ostali ne mogu nastati za ove podatke, vidi NAPOMENA.txt u ZIP-u)',
+      tripAnalyzing: 'Analiziram dane… (stranica može nekoliko minuta ne reagirati)',
+      daysN: '{n} dana', pisteOpt: '{name} ({p}×, {d} dana)',
+      tVert: 'visinskog spusta', tSki: 'na skijama', tRuns: 'spustova', tTop: 'km/h najveća brzina',
+    },
+    en: {
+      title: 'SkiKarta – report and poster',
+      sub: 'Report and poster of a ski day from GPX. Everything is calculated on this device.',
+      offOk: 'Saved for offline use: next time it opens without a connection (GPX files are still processed only on this device).',
+      hint: 'The first visit downloads Python and the maps (a few tens of MB) and can take a minute. After that it is faster.',
+      h1: 'GPX recording of the day', pick: 'Choose GPX…', noFiles: 'No file chosen.', analyze: 'Analyse the day',
+      h2: 'Poster style', iconsNote: 'Thumbnails are drawn from your day, one by one.',
+      h3: 'Poster and report', make: 'Make poster', altDay: 'Poster of the day', savePng: 'Save poster (PNG)',
+      zipDay: 'All posters of the day (ZIP)', pdf: 'Full run-by-run report (PDF)',
+      hTrip: 'Trip poster (several days)',
+      tripNote: 'Choose the GPX recordings of all days at the same resort. Each day is analysed separately and the poster combines them. The same data also gives a poster of a single piste across all days.',
+      pickTrip: 'Choose GPX recordings…', tripAnalyze: 'Analyse the trip', subTrip: 'Trip poster', subPiste: 'Single piste poster',
+      piste: 'Piste', altTrip: 'Trip poster', zipTrip: 'All trip and piste posters (ZIP)',
+      starting: 'Starting…', loadPy: 'Loading Python (1/4)…', startPy: 'Starting Python (2/4)…',
+      loadPkgs: 'Loading numpy and Pillow (3/4)…', loadMaps: 'Loading maps and SkiKarta (4/4: {i}/{n})…', ready: 'Ready',
+      loadErr: 'Loading error: ', stepIs: 'Step: ',
+      stepHint: ' Check your internet connection and reopen the page; if it happens again, send this message.',
+      stalled: 'No progress for 90 s at step: ', stalledHint: ' If it stays like this, send a screenshot.',
+      cannotLoad: 'Cannot load ', unknownErr: 'Unknown error', cdnSilent: 'The CDN does not respond for 20 s',
+      cdnStatus: 'The CDN returned ', cdnBlocked: 'The page may not download Python from cdn.jsdelivr.net (',
+      pyTimeout: 'Python did not start within 3 min; last file: ', missing: 'Missing ',
+      analyzing: 'Analysing the day…', analyzingSlow: 'Analysing the day… (the page may not respond for several tens of seconds)',
+      extras: 'More about the day', longest: 'Longest run at {time}: {km} km', noIcon: 'Not possible for this day', iconErr: 'Error', notPossible: 'Not possible',
+      saved: 'Saved: ', saveCancelled: 'Saving cancelled.', downloading: 'Downloading: ',
+      noSave: 'This browser does not allow saving the file.', drawing: 'Drawing the poster…', writingPdf: 'Writing the PDF…',
+      drawingN: 'Drawing poster {a} of {b}…', nothingMade: 'No poster was made, so there is nothing to save.',
+      zipping: 'Building the ZIP…', zipPartial: ' ({a} of {b} posters; the others cannot be made for this data, see the NOTE.txt in the ZIP)',
+      tripAnalyzing: 'Analysing the days… (the page may not respond for a few minutes)',
+      daysN: '{n} days', pisteOpt: '{name} ({p}×, {d} days)',
+      tVert: 'vertical descent', tSki: 'on skis', tRuns: 'runs', tTop: 'km/h top speed',
+    },
+  };
+  let lang = 'hr';
+  try { const sv = localStorage.getItem('skikarta.lang'); if (sv === 'hr' || sv === 'en') lang = sv; } catch (_) {}
+  const t = (key, vars) => {
+    let text = (UI[lang] && UI[lang][key]) || UI.hr[key] || key;
+    for (const [k, v] of Object.entries(vars || {})) text = text.split('{' + k + '}').join(v);
+    return text;
+  };
+  const num1 = (x) => String(x).replace('.', lang === 'en' ? '.' : ',');
+  let engine = { key: 'starting', vars: null, suffix: '' }, fileNames = [], tripFileNames = [];
+  function renderEngine() { $('engineText').textContent = t(engine.key, engine.vars) + (engine.suffix || ''); }
+  let lastStepInfo = { key: 'starting', vars: null };
+  const stepText = () => t(lastStepInfo.key, lastStepInfo.vars);
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i]').forEach((el) => { el.textContent = t(el.dataset.i); });
+    document.querySelectorAll('[data-alt]').forEach((el) => { el.alt = t(el.dataset.alt); });
+    document.querySelectorAll('[data-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.aria)); });
+    document.title = t('title');
+    $('langHr').classList.toggle('on', lang === 'hr'); $('langEn').classList.toggle('on', lang === 'en');
+    $('fileList').textContent = fileNames.length ? fileNames.join(', ') : t('noFiles');
+    $('tripFileList').textContent = tripFileNames.length ? tripFileNames.join(', ') : t('noFiles');
+    renderEngine();
+    if (!ready && !bootFailed) $('engineHint').textContent = t('hint');
+    if (bootFailed) $('engineHint').textContent = t('stepIs') + stepText() + t('stepHint');
+    if (offlineReady) $('offlineNote').textContent = t('offOk');
+  }
+  let offlineReady = false;
   let ready = false, chosen = 0, poster = null, iconQueue = [];
   try { chosen = parseInt(localStorage.getItem('skikarta.style') || '0', 10) || 0; } catch (_) {}
   const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.29.4/full/';
-  let py = null, lastStep = '', stamp = Date.now();
+  let py = null, stamp = Date.now(), bootFailed = false;
 
-  function setEngine(text, pct) { $('engineText').textContent = text; $('engineBar').style.width = (pct || 0) + '%'; }
-  function step(text, pct) { lastStep = text; stamp = Date.now(); setEngine(text, pct); }
+  function setEngine(key, pct, vars, suffix) {
+    engine = { key, vars: vars || null, suffix: suffix || '' }; renderEngine(); $('engineBar').style.width = (pct || 0) + '%';
+  }
+  function step(key, pct, vars) { lastStepInfo = { key, vars: vars || null }; stamp = Date.now(); setEngine(key, pct, vars); }
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));   // da se poruka iscrta prije dugog računa
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       const el = document.createElement('script'); el.src = src;
-      el.onload = resolve; el.onerror = () => reject(new Error('Ne mogu učitati ' + src));
+      el.crossOrigin = 'anonymous'; el.onload = resolve; el.onerror = () => reject(new Error(t('cannotLoad') + src));
       document.head.append(el);
     });
   }
@@ -155,30 +264,30 @@
   }
   function pyError(err) {
     const lines = String(err && err.message || err).split('\n').map((x) => x.trim()).filter(Boolean);
-    return lines.length ? lines[lines.length - 1] : 'Nepoznata greška';
+    return lines.length ? lines[lines.length - 1] : t('unknownErr');
   }
   // Python (Pyodide) radi u samoj stranici; korak po korak, da se vidi gdje bi zapelo
   async function boot() {
-    step('Učitavam Python (1/4)…', 5);
+    step('loadPy', 5);
     if (typeof loadPyodide !== 'function') await loadScript(PYODIDE + 'pyodide.js');
-    step('Pokrećem Python (2/4)…', 15);
+    step('startPy', 15);
     // dijagnostika: smije li stranica uopće preuzimati Pythonove datoteke s CDN-a
     let probe;
     try {
-      probe = await withTimeout(fetch(PYODIDE + 'pyodide-lock.json'), 20000, 'CDN ne odgovara 20 s');
-      if (!probe.ok) throw new Error('CDN je vratio ' + probe.status);
+      probe = await withTimeout(fetch(PYODIDE + 'pyodide-lock.json'), 20000, t('cdnSilent'));
+      if (!probe.ok) throw new Error(t('cdnStatus') + probe.status);
     } catch (err) {
-      throw new Error('Stranica ne smije preuzeti Python s cdn.jsdelivr.net (' + (err && err.message || err) + ')');
+      throw new Error(t('cdnBlocked') + (err && err.message || err) + ')');
     }
     py = await withTimeout(loadPyodide({ indexURL: PYODIDE }), 180000,
-      'Python se nije pokrenuo za 3 min; zadnja datoteka: ' + (lastFetch || '—'));
-    step('Učitavam numpy i Pillow (3/4)…', 35);
+      t('pyTimeout') + (lastFetch || '—'));
+    step('loadPkgs', 35);
     await py.loadPackage(['numpy', 'pillow', 'tzdata'], { messageCallback: (m) => { $('engineHint').textContent = m; } });
     const list = await (await fetch('paketi.json')).json();
     for (let i = 0; i < list.length; i++) {
-      step(`Učitavam karte i SkiKartu (4/4: ${i + 1}/${list.length})…`, 60 + Math.round(35 * i / list.length));
+      step('loadMaps', 60 + Math.round(35 * i / list.length), { i: i + 1, n: list.length });
       const res = await fetch(list[i]);
-      if (!res.ok) throw new Error('Nedostaje ' + list[i] + ' (' + res.status + ')');
+      if (!res.ok) throw new Error(t('missing') + list[i] + ' (' + res.status + ')');
       py.globals.set('_pack', await res.text());
       await pause(20);
       py.runPython(`
@@ -191,25 +300,53 @@ for _p, _d in json.loads(_pack).items():
 del _pack`);
     }
     py.globals.set('reportProgress', (p) => {});
+    py.globals.set('_lang', lang);
     py.runPython(`
 import sys, os
 sys.path[:0] = ['/home/pyodide/app/skikarta', '/home/pyodide/app/site']
 os.chdir('/home/pyodide/app/skikarta')
-import skikarta_mobile as M`);
-    step('Spremno', 100);
+import skikarta_mobile as M\nM.set_lang(_lang)`);
+    step('ready', 100);
     ready = true; $('engineHint').classList.add('hidden'); updateButtons();
+    saveOffline();
+  }
+  // 2.9: rad bez interneta. Service worker sprema stranicu i pakete; Pyodide s CDN-a upisuje se u predmemoriju ovdje,
+  // jer se na prvom otvaranju učitao prije nego što je worker preuzeo nadzor. Greške se ne prikazuju: bez ovoga sve radi kao prije.
+  function registerOffline() {
+    try {
+      if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+      if (performance.setResourceTimingBufferSize) performance.setResourceTimingBufferSize(500);
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    } catch (_) {}
+  }
+  async function saveOffline() {
+    try {
+      if (!('serviceWorker' in navigator) || !window.caches || !/^https?:$/.test(location.protocol)) return;
+      await withTimeout(navigator.serviceWorker.ready, 15000, 'sw');
+      const cdn = await caches.open('skikarta-cdn-v1');
+      const hosts = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+      const urls = [...new Set(performance.getEntriesByType('resource').map((e) => e.name)
+        .filter((u) => { try { return hosts.includes(new URL(u).hostname); } catch (_) { return false; } }))];
+      for (const u of urls) {
+        if (!(await cdn.match(u))) { try { await cdn.add(u); } catch (_) {} }
+      }
+      const wasm = await caches.match(PYODIDE + 'pyodide.asm.wasm');
+      const packs = await caches.match('paketi.json');
+      if (wasm && packs) { offlineReady = true; $('offlineNote').textContent = t('offOk'); $('offlineNote').classList.remove('hidden'); }
+    } catch (_) {}
   }
   function start() {
     boot().catch((err) => {
-      setEngine('Greška pri učitavanju: ' + pyError(err), 0);
+      bootFailed = true;
+      setEngine('loadErr', 0, null, pyError(err));
       $('engineHint').classList.remove('hidden');
-      $('engineHint').textContent = 'Korak: ' + lastStep + ' Provjeri internetsku vezu i ponovno otvori stranicu; ako se ponovi, pošalji ovu poruku.';
+      $('engineHint').textContent = t('stepIs') + stepText() + t('stepHint');
     });
     const watch = setInterval(() => {
       if (ready) { clearInterval(watch); return; }
       if (Date.now() - stamp > 90000) {
         $('engineHint').classList.remove('hidden');
-        $('engineHint').textContent = 'Već 90 s nema napretka na koraku: ' + lastStep + ' Ako ostane ovako, pošalji snimku zaslona.';
+        $('engineHint').textContent = t('stalled') + stepText() + t('stalledHint');
       }
     }, 5000);
   }
@@ -235,6 +372,7 @@ json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Za
 files = [(str(n), bytes(b.to_py())) for n, b in _files]
 json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Zagreb' }));
       }
+      if (cmd === 'lang') return JSON.parse(call('import json\njson.dumps(M.switch_lang(_l))', { _l: extra.lang }));
       if (cmd === 'zipBegin') { call('M.zip_begin()'); return {}; }
       if (cmd === 'zipAdd') {
         return JSON.parse(extra.trip
@@ -263,7 +401,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     }
   }
 
-  let files = [], busy = false, analyzed = false;
+  let files = [], busy = false, analyzed = false, lastDay = null, lastTrip = null;
   var updateButtons = function () {
     $('analyze').disabled = !ready || busy || !files.length;
     $('makePoster').disabled = busy || !analyzed;
@@ -272,20 +410,21 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   };
   $('gpx').addEventListener('change', (e) => {
     files = Array.from(e.target.files || []);
-    $('fileList').textContent = files.length ? files.map((f) => f.name).join(', ') : 'Nijedna datoteka nije odabrana.';
+    fileNames = files.map((f) => f.name);
+    $('fileList').textContent = fileNames.length ? fileNames.join(', ') : t('noFiles');
     updateButtons();
   });
 
   $('analyze').addEventListener('click', async () => {
     busy = true; analyzed = false; updateButtons(); poster = null;
-    $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = 'Analiziram dan…';
+    $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = t('analyzing');
     ['dayCard', 'styleCard', 'outCard', 'preview', 'savePoster'].forEach((id) => $(id).classList.add('hidden'));
     try {
       const payload = await Promise.all(files.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
-      $('analyzeMsg').textContent = 'Analiziram dan… (stranica može nekoliko desetaka sekundi ne reagirati)';
+      $('analyzeMsg').textContent = t('analyzingSlow');
       const info = await ask('analyze', { files: payload, tz });
-      showDay(info); analyzed = true;
+      lastDay = info; showDay(info); analyzed = true;
       $('analyzeMsg').textContent = '';
       showStyles(info.styles);
     } catch (err) {
@@ -301,7 +440,14 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       const b = document.createElement('b'); b.textContent = s.value; const sp = document.createElement('span'); sp.textContent = s.label;
       t.append(b, sp); $('tiles').append(t);
     });
-    $('longest').textContent = info.longest ? `Najdulji spust u ${info.longest.time}: ${info.longest.km} km` + (info.longest.pistes.length ? ' · ' + info.longest.pistes.slice(0, 3).join(' → ') : '') : '';
+    $('longest').textContent = info.longest ? t('longest', { time: info.longest.time, km: info.longest.km }) + (info.longest.pistes.length ? ' · ' + info.longest.pistes.slice(0, 3).join(' → ') : '') : '';
+    const box = $('extras'); box.innerHTML = '';
+    (info.extras || []).forEach((x) => {
+      const r = document.createElement('div'); r.className = 'xr';
+      const b = document.createElement('b'); b.textContent = x.label; const sp = document.createElement('span'); sp.textContent = x.value;
+      r.append(b, sp); box.append(r);
+    });
+    $('extrasBox').classList.toggle('hidden', !(info.extras || []).length);
     $('dayCard').classList.remove('hidden'); $('outCard').classList.remove('hidden');
   }
 
@@ -335,8 +481,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
         if (!el) continue;
         const img = el.querySelector('.img');
         if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; }
-        else { img.textContent = 'Nije moguće za ovaj dan'; el.disabled = true; el.style.opacity = .5; }
-      } catch (_) { if (el) el.querySelector('.img').textContent = 'Greška'; }
+        else { img.textContent = t('noIcon'); el.disabled = true; el.style.opacity = .5; }
+      } catch (_) { if (el) el.querySelector('.img').textContent = t('iconErr'); }
     }
   }
 
@@ -345,19 +491,19 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   async function save(name, bytes, mime, msgEl) {
     msgEl.className = 'msg';
     if (downloads) {
-      try { await downloads.save({ filename: name, data: new Blob([bytes], { type: mime }) }); msgEl.textContent = 'Spremljeno: ' + name; return; }
-      catch (err) { if (err && err.code === 'declined') { msgEl.textContent = 'Spremanje otkazano.'; return; } }
+      try { await downloads.save({ filename: name, data: new Blob([bytes], { type: mime }) }); msgEl.textContent = t('saved') + name; return; }
+      catch (err) { if (err && err.code === 'declined') { msgEl.textContent = t('saveCancelled'); return; } }
     }
     try {
       const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
       const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      msgEl.textContent = 'Preuzimanje: ' + name;
-    } catch (_) { msgEl.className = 'msg err'; msgEl.textContent = 'Ovaj preglednik ne dopušta spremanje datoteke.'; }
+      msgEl.textContent = t('downloading') + name;
+    } catch (_) { msgEl.className = 'msg err'; msgEl.textContent = t('noSave'); }
   }
 
   $('makePoster').addEventListener('click', async () => {
-    busy = true; updateButtons(); $('outMsg').className = 'msg'; $('outMsg').textContent = 'Crtam poster…';
+    busy = true; updateButtons(); $('outMsg').className = 'msg'; $('outMsg').textContent = t('drawing');
     iconQueue.length = 0;   // poster ima prednost pred preostalim sličicama
     try {
       poster = await ask('poster', { n: chosen });
@@ -373,7 +519,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   });
   $('savePoster').addEventListener('click', () => poster && save(poster.name, poster.bytes, 'image/png', $('outMsg')));
   $('savePdf').addEventListener('click', async () => {
-    busy = true; updateButtons(); $('outMsg').className = 'msg'; $('outMsg').textContent = 'Pišem PDF…';
+    busy = true; updateButtons(); $('outMsg').className = 'msg'; $('outMsg').textContent = t('writingPdf');
     try { const r = await ask('pdf'); await save(r.name, r.bytes, 'application/pdf', $('outMsg')); }
     catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
     finally { busy = false; updateButtons(); }
@@ -385,17 +531,17 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     let done = 0, made = 0;
     await ask('zipBegin');
     for (const job of jobs) {
-      msgEl.textContent = `Crtam poster ${done + 1} od ${jobs.length}…`;
+      msgEl.textContent = t('drawingN', { a: done + 1, b: jobs.length });
       await pause(30);
       const r = await ask('zipAdd', job);
       done++; if (r.ok) made++;
     }
-    if (!made) throw new Error('Nijedan poster nije nastao, pa nema što spremiti.');
-    msgEl.textContent = 'Sastavljam ZIP…';
+    if (!made) throw new Error(t('nothingMade'));
+    msgEl.textContent = t('zipping');
     await pause(30);
     const z = await ask('zipFinish', { scope });
     await save(z.name, z.bytes, 'application/zip', msgEl);
-    if (made < jobs.length) msgEl.textContent += ` (${made} od ${jobs.length} postera; ostali ne mogu nastati za ove podatke, vidi NAPOMENA.txt u ZIP-u)`;
+    if (made < jobs.length) msgEl.textContent += t('zipPartial', { a: made, b: jobs.length });
   }
   $('zipDay').addEventListener('click', async () => {
     busy = true; updateButtons(); $('outMsg').className = 'msg';
@@ -421,19 +567,20 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   updateButtons = function () { origUpdate(); updateTrip(); };
   $('tripGpx').addEventListener('change', (e) => {
     tripFiles = Array.from(e.target.files || []);
-    $('tripFileList').textContent = tripFiles.length ? tripFiles.map((f) => f.name).join(', ') : 'Nijedna datoteka nije odabrana.';
+    tripFileNames = tripFiles.map((f) => f.name);
+    $('tripFileList').textContent = tripFileNames.length ? tripFileNames.join(', ') : t('noFiles');
     updateTrip();
   });
   $('tripAnalyze').addEventListener('click', async () => {
     tripBusy = true; tripReady = false; tripPoster = null; tripToken++; tripQueue = []; updateTrip();
     $('tripBody').classList.add('hidden'); $('tripMsg').className = 'msg';
-    $('tripMsg').textContent = 'Analiziram dane… (stranica može nekoliko minuta ne reagirati)';
+    $('tripMsg').textContent = t('tripAnalyzing');
     try {
       const payload = await Promise.all(tripFiles.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
       const info = await ask('tripAnalyze', { files: payload, tz });
       $('tripMsg').textContent = '';
-      showTrip(info); tripReady = true;
+      lastTrip = info; showTrip(info); tripReady = true;
     } catch (err) { $('tripMsg').className = 'msg err'; $('tripMsg').textContent = err.message; }
     finally { tripBusy = false; updateTrip(); }
   });
@@ -451,11 +598,11 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     return b;
   }
   function showTrip(info) {
-    $('tripResort').textContent = info.resort; $('tripPeriod').textContent = info.period + ' · ' + info.days.length + ' dana';
+    $('tripResort').textContent = info.resort; $('tripPeriod').textContent = info.period + ' · ' + t('daysN', { n: info.days.length });
     $('tripTiles').innerHTML = '';
-    const t = info.totals;
-    [[Math.round(t.descent).toLocaleString('hr-HR') + ' m', 'visinskog spusta'], [String(t.km).replace('.', ',') + ' km', 'na skijama'],
-     [String(t.runs), 'spustova'], [String(t.max_kmh).replace('.', ',') , 'km/h najveća brzina']].forEach(([v, l], i) => {
+    const tot = info.totals;
+    [[Math.round(tot.descent).toLocaleString(lang === 'en' ? 'en-US' : 'hr-HR') + ' m', t('tVert')], [num1(tot.km) + ' km', t('tSki')],
+     [String(tot.runs), t('tRuns')], [num1(tot.max_kmh), t('tTop')]].forEach(([v, l], i) => {
       const d = document.createElement('div'); d.className = 'tile' + (i === 3 ? ' hot' : '');
       const b = document.createElement('b'); b.textContent = v; const sp = document.createElement('span'); sp.textContent = l;
       d.append(b, sp); $('tripTiles').append(d);
@@ -463,7 +610,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     const box = $('tripStyles'); box.innerHTML = '';
     info.styles.putovanje.forEach((s) => box.append(tripTile('putovanje', s)));
     const sel = $('tripPiste'); sel.innerHTML = '';
-    info.pistes.forEach((p) => { const o = document.createElement('option'); o.value = p.name; o.textContent = `${p.name} (${p.passages}×, ${p.days} dana)`; sel.append(o); });
+    info.pistes.forEach((p) => { const o = document.createElement('option'); o.value = p.name; o.textContent = t('pisteOpt', { name: p.name, p: p.passages, d: p.days }); sel.append(o); });
     if (info.default_piste) sel.value = info.default_piste;
     sel.dataset.styles = JSON.stringify(info.styles.staza);
     sel.disabled = !info.pistes.length;
@@ -494,15 +641,15 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
         if (token !== tripToken) return;
         const img = el.querySelector('.img');
         if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; }
-        else { img.textContent = r.error || 'Nije moguće'; el.disabled = true; el.style.opacity = .5; }
-      } catch (_) { el.querySelector('.img').textContent = 'Greška'; }
+        else { img.textContent = r.error || t('notPossible'); el.disabled = true; el.style.opacity = .5; }
+      } catch (_) { el.querySelector('.img').textContent = t('iconErr'); }
     }
   }
   $('tripMake').addEventListener('click', async () => {
     if (!tripPick) return;
     tripBusy = true; updateTrip(); tripToken++;   // poster ima prednost pred preostalim sličicama
     const pending = [...document.querySelectorAll('#tripStyles .style, #pisteStyles .style')].filter((b) => b.querySelector('.img').textContent === '…');
-    $('tripOutMsg').className = 'msg'; $('tripOutMsg').textContent = 'Crtam poster…';
+    $('tripOutMsg').className = 'msg'; $('tripOutMsg').textContent = t('drawing');
     try {
       tripPoster = await ask('tripPoster', { kind: tripPick.kind, n: tripPick.n, piste: $('tripPiste').value });
       $('tripImg').src = URL.createObjectURL(new Blob([tripPoster.bytes], { type: 'image/png' }));
@@ -524,6 +671,40 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     finally { tripBusy = false; updateTrip(); tripQueue = pending; drawTripIcons(tripToken); }
   });
 
+  // ---------------------------------------------------------------- promjena jezika
+  async function setLang(next) {
+    if (next === lang) return;
+    while (busy || tripBusy) await pause(200);   // ne usred crtanja postera
+    lang = next;
+    try { localStorage.setItem('skikarta.lang', lang); } catch (_) {}
+    applyLang();
+    // postera nacrtanih na prethodnom jeziku više nema; sličice se crtaju ponovno
+    poster = null; tripPoster = null;
+    ['preview', 'savePoster', 'tripPreview', 'tripSave'].forEach((id) => $(id).classList.add('hidden'));
+    $('outMsg').textContent = ''; $('tripOutMsg').textContent = '';
+    if (!ready) return;   // Python dobiva jezik pri pokretanju
+    iconQueue.length = 0; tripToken++; tripQueue = [];
+    busy = true; tripBusy = true; updateButtons();
+    try {
+      const r = await ask('lang', { lang });
+      if (r.day) { lastDay = r.day; showDay(r.day); }
+      if (r.trip) {
+        const prev = $('tripPiste').value;
+        lastTrip = r.trip; showTrip(r.trip);
+        if (prev && Array.from($('tripPiste').options).some((o) => o.value === prev)) {
+          $('tripPiste').value = prev; $('tripPiste').dispatchEvent(new Event('change'));
+        }
+      }
+      busy = false; tripBusy = false; updateButtons();
+      if (r.styles) showStyles(r.styles);
+    } catch (err) {
+      $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
+    } finally { busy = false; tripBusy = false; updateButtons(); }
+  }
+  $('langHr').addEventListener('click', () => setLang('hr'));
+  $('langEn').addEventListener('click', () => setLang('en'));
+  applyLang();
+  registerOffline();
   start();
 })();
 </script>
