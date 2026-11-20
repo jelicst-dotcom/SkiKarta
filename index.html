@@ -32,6 +32,10 @@
   button:disabled { opacity:.45; cursor:default; }
   .file { display:block; text-align:center; background:#eef2f6; position:relative; overflow:hidden; }
   .file input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .daymap { margin-top:10px; border-radius:14px; overflow:hidden; border:1px solid var(--line); }
+  .daymap iframe { width:100%; height:min(80vh, 760px); border:0; display:block; }
+  /* 3.3: vidljiv fokus za tipkovnicu (polje za datoteku je nevidljivo preko oznake) */
+  .file:focus-within, button:focus-visible, select:focus-visible, summary:focus-visible { outline:3px solid var(--amber); outline-offset:2px; }
   .files { margin:10px 0; font-size:14px; color:var(--muted); word-break:break-all; }
   .row { display:grid; gap:10px; margin-top:10px; }
   .head h3 { margin:0; font-size:26px; letter-spacing:-.02em; }
@@ -95,6 +99,10 @@
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="longest" style="margin:10px 0 0"></p>
     <details class="extras hidden" id="extrasBox"><summary data-i="extras">Dodatno o danu</summary><div id="extras"></div></details>
+    <button class="ghost" id="showMap" type="button" data-i="showMap" style="margin-top:12px">Karta dana</button>
+    <div class="daymap hidden" id="dayMap"><iframe id="dayFrame" title="Karta dana" data-alt="showMap"></iframe></div>
+    <p class="muted hidden" id="otherDays" style="margin:12px 0 8px"></p>
+    <button class="ghost hidden" id="asTrip" type="button" data-i="asTrip">Napravi putovanje od svih dana</button>
   </div>
 
   <div class="card hidden" id="styleCard">
@@ -127,6 +135,8 @@
       <button class="dark hidden" id="savePoster" data-i="savePng">Spremi poster (PNG)</button>
       <button class="ghost" id="zipDay" data-i="zipDay">Svi posteri dana (ZIP)</button>
       <button class="ghost" id="savePdf" data-i="pdf">Puni izvještaj spust po spust (PDF)</button>
+      <button class="ghost" id="savePage" data-i="pageBtn">Stranica dana za dijeljenje (HTML)</button>
+      <button class="ghost" id="saveVideo" data-i="videoBtn">Animirani dan 9:16 za Instagram (video)</button>
     </div>
     <div class="msg" id="outMsg"></div>
   </div>
@@ -185,7 +195,10 @@
       cdnStatus: 'CDN je vratio ', cdnBlocked: 'Stranica ne smije preuzeti Python s cdn.jsdelivr.net (',
       pyTimeout: 'Python se nije pokrenuo za 3 min; zadnja datoteka: ', missing: 'Nedostaje ',
       analyzing: 'Analiziram dan…', analyzingSlow: 'Analiziram dan… (stranica može nekoliko desetaka sekundi ne reagirati)',
-      extras: 'Dodatno o danu', longest: 'Najdulji spust u {time}: {km} km', noIcon: 'Nije moguće za ovaj dan', iconErr: 'Greška', notPossible: 'Nije moguće',
+      extras: 'Dodatno o danu', longest: 'Najdulji spust u {time}: {km} km',
+      otherDays: 'Zapisi obuhvaćaju još dana: {list}. Prikazan je dan s najviše zapisa.', asTrip: 'Napravi putovanje od svih dana',
+      showMap: 'Karta dana', hideMap: 'Sakrij kartu', pageBtn: 'Stranica dana za dijeljenje (HTML)',
+      videoBtn: 'Animirani dan 9:16 za Instagram (video)', videoDraw: 'Crtam sličice videa: {p} %', videoRec: 'Snimam video: {p} %', videoNo: 'Ovaj preglednik ne može snimiti video.', noIcon: 'Nije moguće za ovaj dan', iconErr: 'Greška', notPossible: 'Nije moguće',
       saved: 'Spremljeno: ', saveCancelled: 'Spremanje otkazano.', downloading: 'Preuzimanje: ',
       noSave: 'Ovaj preglednik ne dopušta spremanje datoteke.', drawing: 'Crtam poster…', writingPdf: 'Pišem PDF…',
       drawingN: 'Crtam poster {a} od {b}…', nothingMade: 'Nijedan poster nije nastao, pa nema što spremiti.',
@@ -219,7 +232,10 @@
       cdnStatus: 'The CDN returned ', cdnBlocked: 'The page may not download Python from cdn.jsdelivr.net (',
       pyTimeout: 'Python did not start within 3 min; last file: ', missing: 'Missing ',
       analyzing: 'Analysing the day…', analyzingSlow: 'Analysing the day… (the page may not respond for several tens of seconds)',
-      extras: 'More about the day', longest: 'Longest run at {time}: {km} km', noIcon: 'Not possible for this day', iconErr: 'Error', notPossible: 'Not possible',
+      extras: 'More about the day', longest: 'Longest run at {time}: {km} km',
+      otherDays: 'The recordings also cover: {list}. The day with the most data is shown.', asTrip: 'Make a trip from all days',
+      showMap: 'Map of the day', hideMap: 'Hide map', pageBtn: 'Shareable day page (HTML)',
+      videoBtn: 'Animated day 9:16 for Instagram (video)', videoDraw: 'Drawing video frames: {p} %', videoRec: 'Recording the video: {p} %', videoNo: 'This browser cannot record video.', noIcon: 'Not possible for this day', iconErr: 'Error', notPossible: 'Not possible',
       saved: 'Saved: ', saveCancelled: 'Saving cancelled.', downloading: 'Downloading: ',
       noSave: 'This browser does not allow saving the file.', drawing: 'Drawing the poster…', writingPdf: 'Writing the PDF…',
       drawingN: 'Drawing poster {a} of {b}…', nothingMade: 'No poster was made, so there is nothing to save.',
@@ -240,6 +256,8 @@
     return text;
   };
   const num1 = (x) => String(x).replace('.', lang === 'en' ? '.' : ',');
+  // cijeli broj kao u Pythonu (skikarta_poster.num): hrvatski razmak za tisuće, engleski zarez
+  const int0 = (x) => (lang === 'en' ? Math.round(x).toLocaleString('en-US') : String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
   let engine = { key: 'starting', vars: null, suffix: '' }, fileNames = [], tripFileNames = [];
   function renderEngine() { $('engineText').textContent = t(engine.key, engine.vars) + (engine.suffix || ''); }
   let lastStepInfo = { key: 'starting', vars: null };
@@ -287,7 +305,9 @@
   }
   function pyError(err) {
     const lines = String(err && err.message || err).split('\n').map((x) => x.trim()).filter(Boolean);
-    return lines.length ? lines[lines.length - 1] : t('unknownErr');
+    // zadnji redak Pythonove poruke, bez naziva iznimke („ValueError: “, „SystemExit: “)
+    const last = lines.length ? lines[lines.length - 1] : '';
+    return last.replace(/^[A-Za-z_.]*(Error|Exit|Exception|Warning):\s*/, '') || t('unknownErr');
   }
   // Python (Pyodide) radi u samoj stranici; korak po korak, da se vidi gdje bi zapelo
   async function boot() {
@@ -426,7 +446,9 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
         out.destroy();
         return { name, bytes };
       }
-      const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : call('M.pdf(True)');
+      if (cmd === 'videoBegin') return JSON.parse(call('import json\njson.dumps(M.video_begin(_s))', { _s: extra.seconds || 20 }));
+      if (cmd === 'videoNext') return JSON.parse(call('import json\njson.dumps(M.video_next(_c))', { _c: extra.count || 10 }));
+      const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? call('M.day_page()') : call('M.pdf(True)');
       const name = out.get(0), bytes = out.get(1).toJs();
       out.destroy();
       return { name, bytes };
@@ -474,6 +496,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   });
 
   function showDay(info) {
+    pageCache = null; $('dayMap').classList.add('hidden'); $('dayFrame').removeAttribute('srcdoc'); $('showMap').textContent = t('showMap');
     $('resort').textContent = info.resort; $('day').textContent = info.day;
     $('tiles').innerHTML = '';
     info.stats.forEach((s, i) => {
@@ -489,6 +512,10 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       r.append(b, sp); box.append(r);
     });
     $('extrasBox').classList.toggle('hidden', !(info.extras || []).length);
+    // 3.3: više dana u odabranim zapisima: prikazan je jedan, ostali se nude kao putovanje
+    const others = info.other_days || [];
+    $('otherDays').textContent = others.length ? t('otherDays', { list: others.join(', ').replace(/\.$/, '') }) : '';
+    $('otherDays').classList.toggle('hidden', !others.length); $('asTrip').classList.toggle('hidden', !others.length);
     $('dayCard').classList.remove('hidden'); $('outCard').classList.remove('hidden');
   }
 
@@ -513,9 +540,12 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     iconQueue = list.map((s) => s.n);
     drawIcons();
   }
+  // 3.3: sličice koje su na zaslonu crtaju se prve (40 stilova na mobitelu traje; vidljive ne čekaju)
+  const onScreen = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+  function takeNext(queue, find) { const i = queue.findIndex((x) => onScreen(find(x))); return queue.splice(i >= 0 ? i : 0, 1)[0]; }
   async function drawIcons() {
     while (iconQueue.length) {
-      const n = iconQueue.shift();
+      const n = takeNext(iconQueue, (k) => $('styles').querySelector(`[data-n="${k}"]`));
       const el = $('styles').querySelector(`[data-n="${n}"]`);
       try {
         const r = await ask('icon', { n });
@@ -595,7 +625,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     photoDrawing = true;
     try {
       while (photoQueue.length) {
-        const n = photoQueue.shift();
+        const n = takeNext(photoQueue, (k) => $('photoStyles').querySelector(`[data-n="${k}"]`));
         const el = $('photoStyles').querySelector(`[data-n="${n}"]`);
         try {
           const r = await ask('photoIcon', { n });
@@ -683,12 +713,74 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   // ---------------------------------------------------------------- poster putovanja i poster staze
   let tripFiles = [], tripBusy = false, tripReady = false, tripPick = null, tripPoster = null, tripToken = 0, tripQueue = [];
   function updateTrip() {
-    $('tripAnalyze').disabled = !ready || tripBusy || tripFiles.length < 2;
+    $('tripAnalyze').disabled = !ready || tripBusy || tripFiles.length < 1;   // 3.3: i jedna datoteka s više dana
     $('tripMake').disabled = tripBusy || !tripReady || !tripPick;
     $('zipTrip').disabled = tripBusy || !tripReady;
   }
   const origUpdate = updateButtons;
   updateButtons = function () { origUpdate(); updateTrip(); };
+  // 3.3: karta dana (ista interaktivna stranica kao za dijeljenje, u okviru)
+  let pageCache = null;
+  async function dayPageBytes() { if (!pageCache) pageCache = await ask('dayPage'); return pageCache; }
+  $('showMap').addEventListener('click', async () => {
+    const box = $('dayMap');
+    if (!box.classList.contains('hidden')) { box.classList.add('hidden'); $('showMap').textContent = t('showMap'); return; }
+    $('showMap').disabled = true;
+    try {
+      const page = await dayPageBytes();
+      $('dayFrame').srcdoc = new TextDecoder().decode(page.bytes);
+      box.classList.remove('hidden'); $('showMap').textContent = t('hideMap');
+    } catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
+    finally { $('showMap').disabled = false; }
+  });
+  // 3.3: animirani dan: Python crta sličice (iste kao video na računalu), preglednik ih snima (MediaRecorder)
+  $('saveVideo').addEventListener('click', async () => {
+    const msg = $('outMsg'); msg.className = 'msg';
+    const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    const mime = (window.MediaRecorder && types.find((m) => MediaRecorder.isTypeSupported(m))) || '';
+    if (!mime || !HTMLCanvasElement.prototype.captureStream) { msg.className = 'msg err'; msg.textContent = t('videoNo'); return; }
+    $('saveVideo').disabled = true; iconQueue.length = 0;
+    try {
+      const meta = await ask('videoBegin', { seconds: 20 });
+      const jpegs = [];
+      for (;;) {
+        const r = await ask('videoNext', { count: 15 });
+        r.frames.forEach((b) => jpegs.push(b));
+        msg.textContent = t('videoDraw', { p: Math.round(100 * jpegs.length / meta.frames) });
+        if (r.done) break;
+      }
+      const cv = document.createElement('canvas'); cv.width = meta.width; cv.height = meta.height;
+      const ctx = cv.getContext('2d');
+      const bitmap = (b64) => createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/jpeg' }));
+      ctx.drawImage(await bitmap(jpegs[0]), 0, 0);
+      const rec = new MediaRecorder(cv.captureStream(meta.fps), { mimeType: mime, videoBitsPerSecond: 8000000 });
+      const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      const stopped = new Promise((res) => { rec.onstop = res; });
+      rec.start();
+      const t0 = performance.now(); let next = await bitmap(jpegs[0]);
+      for (let i = 0; i < jpegs.length; i++) {
+        const frame = next; next = i + 1 < jpegs.length ? bitmap(jpegs[i + 1]) : null;
+        const wait = t0 + i * 1000 / meta.fps - performance.now(); if (wait > 0) await pause(wait);
+        ctx.drawImage(frame, 0, 0); if (frame.close) frame.close();
+        if (next) next = await next;
+        if (i % 15 === 0) msg.textContent = t('videoRec', { p: Math.round(100 * i / jpegs.length) });
+      }
+      await pause(1000 / meta.fps); rec.stop(); await stopped;
+      const blob = new Blob(chunks, { type: mime.split(';')[0] });
+      await save(meta.name + (mime.includes('mp4') ? '.mp4' : '.webm'), new Uint8Array(await blob.arrayBuffer()), mime.split(';')[0], msg);
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
+    finally { $('saveVideo').disabled = false; }
+  });
+  $('savePage').addEventListener('click', async () => {
+    try { const page = await dayPageBytes(); await save(page.name, page.bytes, 'text/html', $('outMsg')); }
+    catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
+  });
+  $('asTrip').addEventListener('click', () => {
+    tripFiles = files.slice(); tripFileNames = tripFiles.map((f) => f.name);
+    $('tripFileList').textContent = tripFileNames.join(', '); updateTrip();
+    $('tripCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!$('tripAnalyze').disabled) $('tripAnalyze').click();
+  });
   $('tripGpx').addEventListener('change', (e) => {
     tripFiles = Array.from(e.target.files || []);
     tripFileNames = tripFiles.map((f) => f.name);
@@ -725,7 +817,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     $('tripResort').textContent = info.resort; $('tripPeriod').textContent = info.period + ' · ' + t('daysN', { n: info.days.length });
     $('tripTiles').innerHTML = '';
     const tot = info.totals;
-    [[Math.round(tot.descent).toLocaleString(lang === 'en' ? 'en-US' : 'hr-HR') + ' m', t('tVert')], [num1(tot.km) + ' km', t('tSki')],
+    [[int0(tot.descent) + ' m', t('tVert')], [num1(tot.km) + ' km', t('tSki')],
      [String(tot.runs), t('tRuns')], [num1(tot.max_kmh), t('tTop')]].forEach(([v, l], i) => {
       const d = document.createElement('div'); d.className = 'tile' + (i === 3 ? ' hot' : '');
       const b = document.createElement('b'); b.textContent = v; const sp = document.createElement('span'); sp.textContent = l;
@@ -742,7 +834,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     box.firstChild.classList.add('on');
     showPisteStyles();
     $('tripBody').classList.remove('hidden');
-    tripToken++; tripQueue = [...box.querySelectorAll('.style')].map((el) => el);
+    // sličice putovanja, zatim sličice postera odabrane staze (prije su ostajale „…”)
+    tripToken++; tripQueue = [...box.querySelectorAll('.style'), ...$('pisteStyles').querySelectorAll('.style')];
     drawTripIcons(tripToken);
   }
   function showPisteStyles() {
@@ -759,7 +852,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   async function drawTripIcons(token) {
     while (tripQueue.length && token === tripToken) {
       if (tripBusy) { await pause(400); continue; }
-      const el = tripQueue.shift();
+      const el = takeNext(tripQueue, (x) => x);
       try {
         const r = await ask('tripIcon', { kind: el.dataset.kind, n: +el.dataset.n, piste: $('tripPiste').value });
         if (token !== tripToken) return;
