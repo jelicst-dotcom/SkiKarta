@@ -66,6 +66,23 @@
   .lang button { width:auto; background:transparent; color:#fff; padding:5px 12px; font-size:13px; font-weight:700; border-radius:0; }
   .lang button.on { background:var(--amber); color:var(--ink); }
   footer { text-align:center; font-size:11px; color:var(--muted); padding:10px 16px 30px; }
+  /* 3.4: radar prijatelja */
+  .field { display:block; font-size:13px; font-weight:600; color:var(--muted); margin:10px 0 4px; }
+  input.txt { width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line); font:inherit; font-size:16px; background:#fff; }
+  .pair { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+  .pair button { width:auto; padding:11px 14px; font-size:14px; }
+  .pair input.tid { width:4.2em; text-align:center; text-transform:uppercase; }
+  .pair select { margin:0; }
+  a.btn { display:block; text-align:center; text-decoration:none; font-weight:600; border-radius:12px; padding:14px 16px; font-size:16px; }
+  .steps { margin:8px 0 0; padding-left:20px; } .steps li { margin:6px 0; }
+  .radar { margin-top:12px; border-radius:14px; overflow:hidden; border:1px solid var(--line); background:var(--snow); }
+  .radar svg { width:100%; height:auto; display:block; }
+  .who { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--line); }
+  .who .dot { width:34px; height:34px; border-radius:999px; display:grid; place-items:center; color:#fff; font-weight:800; font-size:13px; border:3px solid #fff; box-shadow:0 0 0 1px var(--line); }
+  .who .dot.l1 { background:#fff !important; } .who .dot.l2 { background:#fff !important; color:#7a8691 !important; border:2px dashed #7a8691; }
+  .who b { font-size:15px; } .who .lift { font-size:14px; font-weight:600; color:var(--ink); margin:1px 0; } .who .sub { font-size:13px; color:var(--muted); line-height:1.35; }
+  .who .age { font-size:13px; color:var(--muted); text-align:right; white-space:nowrap; line-height:1.9; }
+  .who .maplink { font-weight:600; color:#1c5cab; text-decoration:none; }
 </style>
 </head>
 <body>
@@ -165,6 +182,41 @@
       <div class="msg" id="tripOutMsg"></div>
     </div>
   </div>
+  <div class="card" id="radarCard">
+    <h2><span class="step">+</span><span data-i="hRadar">Radar prijatelja</span></h2>
+    <p class="muted" data-i="radarNote" style="margin:0 0 4px">Gdje je tko na skijalištu. Položaje šalje besplatna aplikacija OwnTracks (Android i iPhone) svakih nekoliko minuta, i kad je ekran ugašen. Poslužitelj čuva trag zadnja 3 sata (da se vidi zadnja žičara), a posljednji položaj briše nakon 12 sati.</p>
+    <label class="field" for="rServer" data-i="rServer">Adresa poslužitelja</label>
+    <input class="txt" id="rServer" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://skikarta-radar.ime.workers.dev">
+    <label class="field" for="rGroup" data-i="rGroup">Kod grupe (tko zna kod, vidi grupu)</label>
+    <div class="pair"><input class="txt" id="rGroup" autocomplete="off" spellcheck="false" maxlength="64"><button type="button" class="ghost" id="rNew" data-i="rNew">Nova grupa</button></div>
+    <label class="field" for="rName" data-i="rName">Tvoje ime na radaru i oznaka (2 slova)</label>
+    <div class="pair"><input class="txt" id="rName" autocomplete="off" maxlength="32"><input class="txt tid" id="rTid" autocomplete="off" maxlength="2" data-aria="rTidAria" aria-label="Oznaka"></div>
+    <div class="row">
+      <button class="dark" id="rOtrc" data-i="rOtrc" disabled>Postavke za OwnTracks (.otrc)</button>
+      <a class="btn ghost hidden" id="rLink" data-i="rLink" href="#">Otvori postavke u OwnTracksu</a>
+      <button class="ghost" id="rInvite" data-i="rInvite">Pozovi prijatelje (poveznica)</button>
+    </div>
+    <div class="msg" id="rMsg"></div>
+    <details class="extras"><summary data-i="rHow">Kako postaviti OwnTracks</summary>
+      <ol class="steps muted">
+        <li data-i="rS1">Instaliraj besplatnu aplikaciju OwnTracks (Google Play ili App Store).</li>
+        <li data-i="rS2">U OwnTracksu, u postavkama, dopusti vanjsku konfiguraciju (učitavanje postavki iz datoteke ili poveznice).</li>
+        <li data-i="rS3">Ovdje upiši svoje ime, preuzmi .otrc datoteku i otvori je na mobitelu (ili dodirni „Otvori postavke u OwnTracksu”).</li>
+        <li data-i="rS4">Dopusti OwnTracksu lokaciju „Uvijek”. Na Androidu isključi optimizaciju baterije za OwnTracks (Postavke › Baterija).</li>
+        <li data-i="rS5">Ako u OwnTracksu postoji postavka točnosti lokacije, odaberi najveću točnost: na skijalištu ima malo Wi-Fi mreža i tornjeva.</li>
+        <li data-i="rS6">Navečer prebaci OwnTracks u način Quiet (ili ga zatvori) da prestane slati položaj.</li>
+      </ol>
+    </details>
+    <h3 class="sub" data-i="rLive">Tko je gdje</h3>
+    <div class="pair"><select id="rMe" data-aria="rMeAria" aria-label="Ja sam"></select><select id="rView" data-aria="rViewAria" aria-label="Pogled"><option value="friends" data-i="rViewF">Oko prijatelja</option><option value="resort" data-i="rViewR">Cijelo skijalište</option></select></div>
+    <button class="primary" id="rShow" data-i="rShow" disabled>Prikaži prijatelje</button>
+    <div class="msg" id="rLiveMsg"></div>
+    <div class="hidden" id="rBody">
+      <div class="radar" id="rMap"></div>
+      <div id="rList"></div>
+      <div class="muted" id="rStamp" style="margin-top:8px"></div>
+    </div>
+  </div>
 </main>
 <footer>© OpenStreetMap contributors (ODbL) · OpenSkiData / OpenSkiMap · Skimap.org · Who’s On First · © Mapterhorn</footer>
 
@@ -209,6 +261,26 @@
       hPhoto: 'Poster s fotografijom (po želji)', photoNote: 'Priloži jednu fotografiju s tog dana i izaberi jedan od 25 stilova. Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.',
       pickPhoto: 'Priloži fotografiju…', makePhoto: 'Napravi poster s fotografijom', zipPhoto: 'Svi posteri s fotografijom (ZIP)',
       removePhoto: 'Makni fotografiju', altPhoto: 'Poster s fotografijom', readingPhoto: 'Čitam fotografiju…',
+      hRadar: 'Radar prijatelja',
+      radarNote: 'Gdje je tko na skijalištu. Položaje šalje besplatna aplikacija OwnTracks (Android i iPhone) svakih nekoliko minuta, i kad je ekran ugašen. Poslužitelj čuva trag zadnja 3 sata (da se vidi zadnja žičara), a posljednji položaj briše nakon 12 sati.',
+      rServer: 'Adresa poslužitelja', rGroup: 'Kod grupe (tko zna kod, vidi grupu)', rNew: 'Nova grupa',
+      rName: 'Tvoje ime na radaru i oznaka (2 slova)', rTidAria: 'Oznaka (2 slova)',
+      rOtrc: 'Postavke za OwnTracks (.otrc)', rLink: 'Otvori postavke u OwnTracksu', rInvite: 'Pozovi prijatelje (poveznica)',
+      rHow: 'Kako postaviti OwnTracks',
+      rS1: 'Instaliraj besplatnu aplikaciju OwnTracks (Google Play ili App Store).',
+      rS2: 'U OwnTracksu, u postavkama, dopusti vanjsku konfiguraciju (učitavanje postavki iz datoteke ili poveznice).',
+      rS3: 'Ovdje upiši svoje ime, preuzmi .otrc datoteku i otvori je na mobitelu (ili dodirni „Otvori postavke u OwnTracksu”).',
+      rS4: 'Dopusti OwnTracksu lokaciju „Uvijek”. Na Androidu isključi optimizaciju baterije za OwnTracks (Postavke › Baterija).',
+      rS5: 'Ako u OwnTracksu postoji postavka točnosti lokacije, odaberi najveću točnost: na skijalištu ima malo Wi-Fi mreža i tornjeva.',
+      rS6: 'Navečer prebaci OwnTracks u način Quiet (ili ga zatvori) da prestane slati položaj.',
+      rLive: 'Tko je gdje', rMeAria: 'Ja sam', rViewAria: 'Pogled', rViewF: 'Oko prijatelja', rViewR: 'Cijelo skijalište',
+      rShow: 'Prikaži prijatelje', rStop: 'Zaustavi osvježavanje', rMeNone: 'Tko si ti?', rMeIs: '{name}',
+      rLoading: 'Dohvaćam položaje…', rStamp: 'Osvježeno u {time}; sljedeće osvježavanje za minutu (dok je stranica otvorena).',
+      rNoServer: 'Upiši adresu poslužitelja i kod grupe.', rNet: 'Poslužitelj ne odgovara ({why}). Provjeri adresu i internetsku vezu.',
+      rRefused: 'Poslužitelj je odbio zahtjev ({why}). Provjeri kod grupe.',
+      rCopied: 'Poveznica je kopirana: pošalji je prijateljima.', rInviteText: 'SkiKarta radar: otvori {url} , upiši svoje ime i preuzmi postavke za OwnTracks.',
+      rOnMap: 'Karta ↗', rBatt: 'baterija {n} %', rAcc: '±{n} m', rYou: 'ti', rCodeMade: 'Nova grupa je napravljena. Pošalji poveznicu prijateljima.',
+      rFile: 'Otvori datoteku {name} na mobitelu na kojem je OwnTracks.',
     },
     en: {
       title: 'SkiKarta – report and poster',
@@ -246,6 +318,26 @@
       hPhoto: 'Poster with a photo (optional)', photoNote: 'Attach one photo from that day and pick one of 25 styles. If the photo has a capture time, the poster marks where it was taken.',
       pickPhoto: 'Attach a photo…', makePhoto: 'Make the photo poster', zipPhoto: 'All photo posters (ZIP)',
       removePhoto: 'Remove the photo', altPhoto: 'Poster with a photo', readingPhoto: 'Reading the photo…',
+      hRadar: 'Friend radar',
+      radarNote: 'Who is where at the resort. Positions are sent by the free OwnTracks app (Android and iPhone) every few minutes, even with the screen off. The server keeps the last 3 hours of positions (to tell the last lift) and deletes the last position after 12 hours.',
+      rServer: 'Server address', rGroup: 'Group code (anyone who knows it sees the group)', rNew: 'New group',
+      rName: 'Your name on the radar and initials (2 letters)', rTidAria: 'Initials (2 letters)',
+      rOtrc: 'Settings for OwnTracks (.otrc)', rLink: 'Open the settings in OwnTracks', rInvite: 'Invite friends (link)',
+      rHow: 'How to set up OwnTracks',
+      rS1: 'Install the free OwnTracks app (Google Play or App Store).',
+      rS2: 'In OwnTracks settings, allow external configuration (loading settings from a file or a link).',
+      rS3: 'Enter your name here, download the .otrc file and open it on the phone (or tap “Open the settings in OwnTracks”).',
+      rS4: 'Allow OwnTracks location “Always”. On Android, turn off battery optimisation for OwnTracks (Settings › Battery).',
+      rS5: 'If OwnTracks has a location accuracy setting, choose the highest accuracy: resorts have few Wi-Fi networks and cell towers.',
+      rS6: 'In the evening switch OwnTracks to Quiet mode (or close it) so it stops sending your position.',
+      rLive: 'Who is where', rMeAria: 'I am', rViewAria: 'View', rViewF: 'Around friends', rViewR: 'Whole resort',
+      rShow: 'Show friends', rStop: 'Stop refreshing', rMeNone: 'Who are you?', rMeIs: '{name}',
+      rLoading: 'Fetching positions…', rStamp: 'Refreshed at {time}; next refresh in a minute (while the page is open).',
+      rNoServer: 'Enter the server address and the group code.', rNet: 'The server does not respond ({why}). Check the address and the connection.',
+      rRefused: 'The server refused the request ({why}). Check the group code.',
+      rCopied: 'The link is copied: send it to your friends.', rInviteText: 'SkiKarta radar: open {url} , enter your name and download the OwnTracks settings.',
+      rOnMap: 'Map ↗', rBatt: 'battery {n} %', rAcc: '±{n} m', rYou: 'you', rCodeMade: 'A new group is ready. Send the link to your friends.',
+      rFile: 'Open the file {name} on the phone that has OwnTracks.',
     },
   };
   let lang = 'hr';
@@ -446,6 +538,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
         out.destroy();
         return { name, bytes };
       }
+      if (cmd === 'radarConfig') return JSON.parse(call('import json\njson.dumps(M.radar_config(_s, _g, _n, _t))', { _s: extra.server, _g: extra.group, _n: extra.name, _t: extra.tid || '' }));
+      if (cmd === 'radarMap') return JSON.parse(call('import json\njson.dumps(M.radar_map(_a, _m, _v))', { _a: extra.answer, _m: extra.me || '', _v: extra.view || 'friends' }));
       if (cmd === 'videoBegin') return JSON.parse(call('import json\njson.dumps(M.video_begin(_s))', { _s: extra.seconds || 20 }));
       if (cmd === 'videoNext') return JSON.parse(call('import json\njson.dumps(M.video_next(_c))', { _c: extra.count || 10 }));
       const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? call('M.day_page()') : call('M.pdf(True)');
@@ -888,6 +982,126 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     finally { tripBusy = false; updateTrip(); tripQueue = pending; drawTripIcons(tripToken); }
   });
 
+  // ---------------------------------------------------------------- 3.4: radar prijatelja (OwnTracks)
+  const RKEY = 'skikarta.radar';
+  let radarTimer = null, radarOn = false, radarLast = null, radarMe = '', radarSeq = 0;
+  const fold = (x) => (x || '').replace(/đ/g, 'dj').replace(/Đ/g, 'Dj').normalize('NFKD').replace(/[^A-Za-z0-9 ._-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 32);
+  const rMsg = (el, text, err) => { el.className = 'msg' + (err ? ' err' : ''); el.textContent = text || ''; };
+  const radarServer = () => $('rServer').value.trim().replace(/\/+$/, '');
+  function radarLoad() {
+    let st = {};
+    try { st = JSON.parse(localStorage.getItem(RKEY) || '{}') || {}; } catch (_) {}
+    try {   // poziv prijatelja: …/#radar=<poslužitelj>&g=<kod>
+      const h = new URLSearchParams(location.hash.slice(1));
+      if (h.get('radar')) st.server = h.get('radar');
+      if (h.get('g')) st.group = h.get('g');
+    } catch (_) {}
+    $('rServer').value = st.server || ''; $('rGroup').value = st.group || '';
+    $('rName').value = st.name || ''; $('rTid').value = st.tid || '';
+    $('rView').value = st.view === 'resort' ? 'resort' : 'friends';
+    radarMe = st.me || '';
+  }
+  function radarStore() {
+    const st = { server: radarServer(), group: $('rGroup').value.trim(), name: $('rName').value.trim(),
+      tid: $('rTid').value.trim(), view: $('rView').value, me: radarMe };
+    try { localStorage.setItem(RKEY, JSON.stringify(st)); } catch (_) {}
+    return st;
+  }
+  ['rServer', 'rGroup', 'rName', 'rTid'].forEach((id) => $(id).addEventListener('change', () => { radarStore(); $('rLink').classList.add('hidden'); }));
+  $('rNew').addEventListener('click', () => {
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789', r = new Uint8Array(14);
+    crypto.getRandomValues(r);
+    $('rGroup').value = 'sk' + Array.from(r, (x) => A[x % A.length]).join('');
+    radarStore(); $('rLink').classList.add('hidden');
+    rMsg($('rMsg'), t('rCodeMade'));
+  });
+  $('rOtrc').addEventListener('click', async () => {
+    const st = radarStore();
+    try {
+      const cfg = await ask('radarConfig', { server: st.server, group: st.group, name: st.name, tid: st.tid });
+      if (!st.tid) { $('rTid').value = cfg.tid; radarStore(); }
+      $('rLink').href = cfg.link; $('rLink').classList.remove('hidden');
+      await save(cfg.file, new TextEncoder().encode(cfg.text), 'application/octet-stream', $('rMsg'));
+      if (!$('rMsg').classList.contains('err')) $('rMsg').textContent += ' · ' + t('rFile', { name: cfg.file });
+    } catch (err) { rMsg($('rMsg'), err.message, true); }
+  });
+  $('rInvite').addEventListener('click', async () => {
+    const st = radarStore();
+    if (!st.server || !st.group) { rMsg($('rMsg'), t('rNoServer'), true); return; }
+    const url = location.origin + location.pathname + '#radar=' + encodeURIComponent(st.server) + '&g=' + encodeURIComponent(st.group);
+    const text = t('rInviteText', { url });
+    try { if (navigator.share) { await navigator.share({ text }); return; } }
+    catch (err) { if (err && err.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text); rMsg($('rMsg'), t('rCopied')); } catch (_) { rMsg($('rMsg'), text); }
+  });
+  async function radarRender() {
+    if (!radarLast || !ready) return;
+    const r = await ask('radarMap', { answer: radarLast, me: radarMe, view: $('rView').value });
+    if (!radarMe && r.names.includes(fold($('rName').value))) { radarMe = fold($('rName').value); radarStore(); return radarRender(); }
+    $('rMap').innerHTML = r.svg;   // imena su na poslužitelju i u Pythonu očišćena i escapirana
+    const sel = $('rMe'); sel.textContent = '';
+    sel.add(new Option(t('rMeNone'), ''));
+    for (const n of r.names) sel.add(new Option(t('rMeIs', { name: n }), n));
+    sel.value = r.names.includes(radarMe) ? radarMe : '';
+    const list = $('rList'); list.textContent = '';
+    for (const row of r.rows) {
+      const d = document.createElement('div'); d.className = 'who';
+      const dot = document.createElement('span'); dot.className = 'dot' + (row.level ? ' l' + row.level : '');
+      dot.style.background = row.color;
+      if (row.level === 1) { dot.style.color = row.color; dot.style.borderColor = row.color; }
+      dot.textContent = row.tid;
+      const mid = document.createElement('div');
+      const b = document.createElement('b'); b.textContent = row.is_me ? row.name + ' (' + t('rYou') + ')' : row.name; mid.append(b);
+      const sub = [row.where, row.near, row.batt != null ? t('rBatt', { n: Math.round(row.batt) }) : '',
+        row.acc != null && row.acc > 50 ? t('rAcc', { n: Math.round(row.acc) }) : ''].filter(Boolean).join(' · ');
+      if (row.lift) { const ld = document.createElement('div'); ld.className = 'lift'; ld.textContent = row.lift; mid.append(ld); }
+      if (sub) { const sd = document.createElement('div'); sd.className = 'sub'; sd.textContent = sub; mid.append(sd); }
+      const age = document.createElement('div'); age.className = 'age'; age.textContent = row.age;
+      const map = document.createElement('a'); map.className = 'maplink'; map.textContent = t('rOnMap');
+      map.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(row.lat.toFixed(6) + ',' + row.lon.toFixed(6));
+      map.target = '_blank'; map.rel = 'noopener'; age.append(document.createElement('br'), map);
+      d.append(dot, mid, age); list.append(d);
+    }
+    $('rStamp').textContent = t('rStamp', { time: new Date().toLocaleTimeString(lang === 'en' ? 'en-GB' : 'hr-HR', { hour: '2-digit', minute: '2-digit' }) });
+    $('rBody').classList.remove('hidden');
+  }
+  async function radarFetch() {
+    const server = radarServer(), group = $('rGroup').value.trim();
+    if (!server || !group) { rMsg($('rLiveMsg'), t('rNoServer'), true); radarStop(); return; }
+    if (!radarLast) rMsg($('rLiveMsg'), t('rLoading'));
+    const my = ++radarSeq;   // stariji odgovor (npr. s prijašnje adrese) ne smije prebrisati noviji
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+    try {
+      const res = await fetch(server + '/grupa/' + encodeURIComponent(group), { cache: 'no-store', signal: ctl.signal });
+      if (!res.ok) { const body = (await res.text().catch(() => '')).slice(0, 80); const e = new Error('HTTP ' + res.status + (body ? ': ' + body : '')); e.refused = true; throw e; }
+      const body = await res.text();
+      if (my !== radarSeq) return;
+      radarLast = body;
+      rMsg($('rLiveMsg'), '');
+      await radarRender();
+    } catch (err) {
+      if (my !== radarSeq) return;
+      rMsg($('rLiveMsg'), t(err && err.refused ? 'rRefused' : 'rNet', { why: err && err.name === 'AbortError' ? 'timeout' : (err && err.message) || '?' }), true);
+    } finally { clearTimeout(timer); }
+  }
+  function radarStart() {
+    radarStore(); radarOn = true; $('rShow').textContent = t('rStop');
+    radarFetch();
+    radarTimer = setInterval(() => { if (document.visibilityState === 'visible') radarFetch(); }, 60000);
+  }
+  function radarStop() { radarSeq++; radarOn = false; clearInterval(radarTimer); radarTimer = null; $('rShow').textContent = t('rShow'); }
+  $('rShow').addEventListener('click', () => (radarOn ? radarStop() : radarStart()));
+  document.addEventListener('visibilitychange', () => { if (radarOn && document.visibilityState === 'visible') radarFetch(); });
+  $('rMe').addEventListener('change', () => { radarMe = $('rMe').value; radarStore(); radarRender().catch(() => {}); });
+  $('rView').addEventListener('change', () => { radarStore(); radarRender().catch(() => {}); });
+  function radarAfterLang() {
+    $('rShow').textContent = t(radarOn ? 'rStop' : 'rShow');
+    if (radarLast && ready) radarRender().catch(() => {});
+  }
+  const radarUpdate = updateButtons;
+  updateButtons = function () { radarUpdate(); $('rOtrc').disabled = !ready; $('rShow').disabled = !ready; };
+  radarLoad();
+
   // ---------------------------------------------------------------- promjena jezika
   async function setLang(next) {
     if (next === lang) return;
@@ -899,7 +1113,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     poster = null; tripPoster = null; photoOut = null; photoQueue = [];
     ['preview', 'savePoster', 'tripPreview', 'tripSave', 'photoPreview', 'photoSave'].forEach((id) => $(id).classList.add('hidden'));
     $('outMsg').textContent = ''; $('tripOutMsg').textContent = '';
-    if (!ready) return;   // Python dobiva jezik pri pokretanju
+    if (!ready) { radarAfterLang(); return; }   // Python dobiva jezik pri pokretanju
     iconQueue.length = 0; tripToken++; tripQueue = [];
     busy = true; tripBusy = true; updateButtons();
     try {
@@ -918,6 +1132,7 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     } catch (err) {
       $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
     } finally { busy = false; tripBusy = false; updateButtons(); }
+    radarAfterLang();
   }
   $('langHr').addEventListener('click', () => setLang('hr'));
   $('langEn').addEventListener('click', () => setLang('en'));
