@@ -83,6 +83,21 @@
   .who b { font-size:15px; } .who .lift { font-size:14px; font-weight:600; color:var(--ink); margin:1px 0; } .who .sub { font-size:13px; color:var(--muted); line-height:1.35; }
   .who .age { font-size:13px; color:var(--muted); text-align:right; white-space:nowrap; line-height:1.9; }
   .who .maplink { font-weight:600; color:#1c5cab; text-decoration:none; }
+  .gt { width:100%; border-collapse:collapse; font-size:14px; margin-top:10px; }
+  .gt th { text-align:right; font-size:12px; color:var(--muted); font-weight:600; padding:4px 2px; }
+  .gt th:first-child, .gt td:first-child { text-align:left; }
+  .gt td { text-align:right; padding:7px 2px; border-top:1px solid var(--line); }
+  .gt td b { font-weight:700; }
+  .gt .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  .badges { display:flex; flex-wrap:wrap; gap:6px; }
+  .badges span { font-size:13px; padding:6px 10px; border-radius:999px; background:#eef2f6; color:var(--ink); }
+  .badges span.on { background:var(--ink); color:#fff; }
+  .badges span i { font-style:normal; color:var(--muted); margin-left:4px; }
+  .badges span.on i { color:#a9b6c2; }
+  .names { display:grid; gap:6px; margin:8px 0 10px; }
+  .names label { display:grid; grid-template-columns:1fr; gap:2px; font-size:12px; color:var(--muted); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .two select { margin:0; }
 </style>
 </head>
 <body>
@@ -154,8 +169,20 @@
       <button class="ghost" id="savePdf" data-i="pdf">Puni izvještaj spust po spust (PDF)</button>
       <button class="ghost" id="savePage" data-i="pageBtn">Stranica dana za dijeljenje (HTML)</button>
       <button class="ghost" id="saveVideo" data-i="videoBtn">Animirani dan 9:16 za Instagram (video)</button>
+      <button class="ghost" id="addPassport" data-i="addPas">Dodaj ovaj dan u pasoš skijališta</button>
     </div>
     <div class="msg" id="outMsg"></div>
+    <details class="extras" id="reliefBox"><summary data-i="relSum">3D reljef dana za ispis (STL)</summary>
+      <p class="muted" data-i="relNote" style="margin:8px 0">Teren oko tvog traga s urezanim tragom dana, za 3D pisač. Teren se preuzima s Mapterhorna (treba internet, nekoliko MB), a model se računa na ovom uređaju.</p>
+      <div class="two"><select id="relW" data-aria="relWAria" aria-label="Veličina"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select>
+        <select id="relX" data-aria="relXAria" aria-label="Uvećanje visine"><option value="1">1×</option><option value="1.5" selected>1,5×</option><option value="2">2×</option></select></div>
+      <div class="row">
+        <button class="dark" id="relMake" data-i="relMake">Napravi 3D model</button>
+        <div class="preview hidden" id="relPrev"><img id="relImg" data-alt="altRel" alt="3D reljef"></div>
+        <button class="primary hidden" id="relSave" data-i="relSave">Spremi 3D model (ZIP sa STL-ovima)</button>
+      </div>
+      <div class="msg" id="relMsg"></div>
+    </details>
   </div>
 
   <div class="card" id="tripCard">
@@ -181,6 +208,65 @@
       </div>
       <div class="msg" id="tripOutMsg"></div>
     </div>
+  </div>
+  <div class="card" id="pasCard">
+    <h2><span class="step">+</span><span data-i="hPas">Pasoš skijališta</span></h2>
+    <p class="muted" data-i="pasNote" style="margin:0 0 10px">Koliko si staza i žičara skijališta prošao kroz sve dane i godine. Staza je osvojena kad skijaš barem 85 % njezine duljine (zbroj svih dana). Pasoš se pamti samo u ovom pregledniku.</p>
+    <label class="file"><span data-i="pickPas">Dodaj GPX zapise dana…</span><input id="pasGpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
+    <div class="files" id="pasFileList"></div>
+    <button class="primary" id="pasAdd" data-i="pasAdd" disabled>Dodaj u pasoš</button>
+    <div class="msg" id="pasMsg"></div>
+    <div class="hidden" id="pasBody">
+      <select id="pasResort" data-aria="pasResortAria" aria-label="Skijalište" style="margin-top:12px"></select>
+      <div class="tiles" id="pasTiles"></div>
+      <h3 class="sub" data-i="pasBadges">Značke</h3>
+      <div class="badges" id="pasBadgeList"></div>
+      <h3 class="sub" data-i="pasNext">Sljedeći put</h3>
+      <ul class="steps muted" id="pasSuggest"></ul>
+      <div class="row">
+        <button class="primary" id="pasMake" data-i="pasMake">Napravi poster pasoša</button>
+        <div class="preview hidden" id="pasPrev"><img id="pasImg" data-alt="altPas" alt="Pasoš skijališta"></div>
+        <button class="dark hidden" id="pasSave" data-i="savePng">Spremi poster (PNG)</button>
+      </div>
+    </div>
+    <details class="extras"><summary data-i="pasCopy">Kopija pasoša</summary>
+      <p class="muted" data-i="pasCopyNote" style="margin:8px 0">Pasoš je samo u ovom pregledniku. Spremi kopiju da ga preneseš na drugi uređaj ili sačuvaš ako brišeš podatke preglednika.</p>
+      <div class="row">
+        <button class="ghost" id="pasExport" data-i="pasExport">Spremi kopiju pasoša (JSON)</button>
+        <label class="file"><span data-i="pasImport">Učitaj kopiju pasoša…</span><input id="pasImportFile" type="file" accept=".json,application/json"></label>
+        <button class="ghost" id="pasClear" data-i="pasClear">Obriši pasoš</button>
+      </div>
+    </details>
+    <div class="msg" id="pasOutMsg"></div>
+  </div>
+  <div class="card" id="grpCard">
+    <h2><span class="step">+</span><span data-i="hGrp">Grupni dan</span></h2>
+    <p class="muted" data-i="grpNote" style="margin:0 0 10px">Zapisi više osoba istog dana na istom skijalištu (po jedan GPX za svaku osobu, do 8 osoba): tko je koliko skijao, koliko ste bili zajedno i tko je bio najbrži na kojoj stazi.</p>
+    <label class="file"><span data-i="pickGrp">Odaberi GPX zapise (jedan po osobi)…</span><input id="grpGpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" multiple></label>
+    <div class="names" id="grpNames"></div>
+    <button class="primary" id="grpAnalyze" data-i="grpAnalyze" disabled>Usporedi</button>
+    <div class="msg" id="grpMsg"></div>
+    <div class="hidden" id="grpBody">
+      <div class="head" style="margin-top:14px"><h3 id="grpResort"></h3><div class="muted" id="grpDate"></div></div>
+      <div id="grpTable"></div>
+      <div id="grpFacts" style="margin-top:10px"></div>
+      <div class="row">
+        <button class="primary" id="grpMake" data-i="grpMake">Napravi poster grupnog dana</button>
+        <div class="preview hidden" id="grpPrev"><img id="grpImg" data-alt="altGrp" alt="Grupni dan"></div>
+        <button class="dark hidden" id="grpSave" data-i="savePng">Spremi poster (PNG)</button>
+      </div>
+      <div id="grpDuelBox">
+        <h3 class="sub" data-i="grpDuel">Dvoboj na stazi</h3>
+        <select id="grpPiste" data-aria="piste" aria-label="Staza"></select>
+        <div class="two"><select id="grpA" data-aria="grpAAria" aria-label="Prva osoba"></select><select id="grpB" data-aria="grpBAria" aria-label="Druga osoba"></select></div>
+        <div class="row">
+          <button class="primary" id="grpDuelMake" data-i="grpDuelMake">Napravi poster dvoboja</button>
+          <div class="preview hidden" id="grpDuelPrev"><img id="grpDuelImg" data-alt="altDuel" alt="Dvoboj"></div>
+          <button class="dark hidden" id="grpDuelSave" data-i="savePng">Spremi poster (PNG)</button>
+        </div>
+      </div>
+    </div>
+    <div class="msg" id="grpOutMsg"></div>
   </div>
   <div class="card" id="radarCard">
     <h2><span class="step">+</span><span data-i="hRadar">Radar prijatelja</span></h2>
@@ -281,6 +367,33 @@
       rCopied: 'Poveznica je kopirana: pošalji je prijateljima.', rInviteText: 'SkiKarta radar: otvori {url} , upiši svoje ime i preuzmi postavke za OwnTracks.',
       rOnMap: 'Karta ↗', rBatt: 'baterija {n} %', rAcc: '±{n} m', rYou: 'ti', rCodeMade: 'Nova grupa je napravljena. Pošalji poveznicu prijateljima.',
       rFile: 'Otvori datoteku {name} na mobitelu na kojem je OwnTracks.',
+      addPas: 'Dodaj ovaj dan u pasoš skijališta', pasAdded: 'Dan je u pasošu: {resort} ({n} {days}).',
+      relSum: '3D reljef dana za ispis (STL)',
+      relNote: 'Teren oko tvog traga s urezanim tragom dana, za 3D pisač. Teren se preuzima s Mapterhorna (treba internet, nekoliko MB), a model se računa na ovom uređaju.',
+      relWAria: 'Veličina modela', relXAria: 'Uvećanje visine', relMake: 'Napravi 3D model', altRel: '3D reljef dana',
+      relSave: 'Spremi 3D model (ZIP sa STL-ovima)', relPlan: 'Preuzimam teren ({i}/{n})…', relBuild: 'Računam 3D model…',
+      relNet: 'Teren se ne može preuzeti ({why}). Za 3D reljef treba internetska veza.',
+      relInfo: 'Model {w} × {h} mm · {tri} trokuta · teren Mapterhorn, piksel oko {px} m. U ZIP-u su teren.stl (sa žlijebom traga), trag.stl (za drugu boju), pregled i upute.',
+      hPas: 'Pasoš skijališta',
+      pasNote: 'Koliko si staza i žičara skijališta prošao kroz sve dane i godine. Staza je osvojena kad skijaš barem 85 % njezine duljine (zbroj svih dana). Pasoš se pamti samo u ovom pregledniku.',
+      pickPas: 'Dodaj GPX zapise dana…', pasAdd: 'Dodaj u pasoš', pasResortAria: 'Skijalište', pasBadges: 'Značke', pasNext: 'Sljedeći put',
+      pasMake: 'Napravi poster pasoša', altPas: 'Pasoš skijališta', pasCopy: 'Kopija pasoša',
+      pasCopyNote: 'Pasoš je samo u ovom pregledniku. Spremi kopiju da ga preneseš na drugi uređaj ili sačuvaš ako brišeš podatke preglednika.',
+      pasExport: 'Spremi kopiju pasoša (JSON)', pasImport: 'Učitaj kopiju pasoša…', pasClear: 'Obriši pasoš',
+      pasEmpty: 'Pasoš je prazan. Dodaj dane iz GPX zapisa ili gumbom „Dodaj ovaj dan u pasoš” nakon analize dana.',
+      pasAdding: 'Analiziram dane za pasoš…', pasDone: 'Dodano dana: {n}.', pasSkipped: ' Preskočeno (nije na skijalištu s kartom): {list}.',
+      pasConfirm: 'Obrisati cijeli pasoš u ovom pregledniku? To se ne može poništiti (osim iz spremljene kopije).',
+      pasCleared: 'Pasoš je obrisan.', pasImported: 'Kopija je učitana: {n} {days} u pasošu.', pasBadFile: 'Datoteka nije kopija pasoša.',
+      pasOption: '{name} · {n} {days}', pDone: 'staza osvojeno', pStarted: 'započetih staza', pLifts: 'žičara voženo', pKm: 'km staza skijano',
+      pNone: 'Nema prijedloga: sve staze težine koju si skijao su osvojene.',
+      hGrp: 'Grupni dan',
+      grpNote: 'Zapisi više osoba istog dana na istom skijalištu (po jedan GPX za svaku osobu, do 8 osoba): tko je koliko skijao, koliko ste bili zajedno i tko je bio najbrži na kojoj stazi.',
+      pickGrp: 'Odaberi GPX zapise (jedan po osobi)…', grpAnalyze: 'Usporedi', grpNameOf: 'Ime za {file}', person: 'Osoba {n}',
+      grpAnalyzing: 'Analiziram zapise svih osoba…', grpMake: 'Napravi poster grupnog dana', altGrp: 'Grupni dan',
+      grpDuel: 'Dvoboj na stazi', grpAAria: 'Prva osoba', grpBAria: 'Druga osoba', grpDuelMake: 'Napravi poster dvoboja', altDuel: 'Dvoboj na stazi',
+      gRuns: 'spustovi', gKm: 'km', gVert: 'spust m', gMax: 'km/h', gTogether: '{a} i {b}: {t} na ≤ 50 m', gLifts: ' · istih vožnji žičarom: {n}',
+      gAll: 'Svi zajedno: {t}', gNoDuel: 'Nijednu stazu nisu cijelu prošle barem dvije osobe, pa nema dvoboja.', gFastest: 'Najbrži po stazama',
+      gNeed2: 'Odaberi zapise barem dvije osobe.',
     },
     en: {
       title: 'SkiKarta – report and poster',
@@ -338,6 +451,33 @@
       rCopied: 'The link is copied: send it to your friends.', rInviteText: 'SkiKarta radar: open {url} , enter your name and download the OwnTracks settings.',
       rOnMap: 'Map ↗', rBatt: 'battery {n} %', rAcc: '±{n} m', rYou: 'you', rCodeMade: 'A new group is ready. Send the link to your friends.',
       rFile: 'Open the file {name} on the phone that has OwnTracks.',
+      addPas: 'Add this day to the resort passport', pasAdded: 'The day is in the passport: {resort} ({n} {days}).',
+      relSum: '3D relief of the day for printing (STL)',
+      relNote: 'The terrain around your track with the day’s track cut into it, for a 3D printer. The terrain is downloaded from Mapterhorn (needs internet, a few MB) and the model is computed on this device.',
+      relWAria: 'Model size', relXAria: 'Height exaggeration', relMake: 'Make the 3D model', altRel: '3D relief of the day',
+      relSave: 'Save the 3D model (ZIP with STL files)', relPlan: 'Downloading the terrain ({i}/{n})…', relBuild: 'Computing the 3D model…',
+      relNet: 'The terrain cannot be downloaded ({why}). The 3D relief needs an internet connection.',
+      relInfo: 'Model {w} × {h} mm · {tri} triangles · Mapterhorn terrain, pixel about {px} m. The ZIP has teren.stl (with the track groove), trag.stl (for a second colour), a preview and instructions.',
+      hPas: 'Resort passport',
+      pasNote: 'How many pistes and lifts of a resort you have done across all days and years. A piste is done when you have skied at least 85 % of its length (all days together). The passport is kept only in this browser.',
+      pickPas: 'Add GPX recordings of days…', pasAdd: 'Add to passport', pasResortAria: 'Resort', pasBadges: 'Badges', pasNext: 'Next time',
+      pasMake: 'Make the passport poster', altPas: 'Resort passport', pasCopy: 'Passport copy',
+      pasCopyNote: 'The passport is only in this browser. Save a copy to move it to another device or keep it if you clear the browser data.',
+      pasExport: 'Save a passport copy (JSON)', pasImport: 'Load a passport copy…', pasClear: 'Delete the passport',
+      pasEmpty: 'The passport is empty. Add days from GPX recordings or with “Add this day to the passport” after analysing a day.',
+      pasAdding: 'Analysing days for the passport…', pasDone: 'Days added: {n}.', pasSkipped: ' Skipped (not at a resort with a map): {list}.',
+      pasConfirm: 'Delete the whole passport in this browser? This cannot be undone (except from a saved copy).',
+      pasCleared: 'The passport is deleted.', pasImported: 'The copy is loaded: {n} {days} in the passport.', pasBadFile: 'The file is not a passport copy.',
+      pasOption: '{name} · {n} {days}', pDone: 'pistes done', pStarted: 'pistes started', pLifts: 'lifts ridden', pKm: 'km of pistes skied',
+      pNone: 'No suggestions: every piste of the difficulty you ski is done.',
+      hGrp: 'Group day',
+      grpNote: 'Recordings of several people on the same day at the same resort (one GPX per person, up to 8 people): who skied how much, how long you were together and who was fastest on which piste.',
+      pickGrp: 'Choose GPX recordings (one per person)…', grpAnalyze: 'Compare', grpNameOf: 'Name for {file}', person: 'Person {n}',
+      grpAnalyzing: 'Analysing everyone’s recordings…', grpMake: 'Make the group day poster', altGrp: 'Group day',
+      grpDuel: 'Piste duel', grpAAria: 'First person', grpBAria: 'Second person', grpDuelMake: 'Make the duel poster', altDuel: 'Piste duel',
+      gRuns: 'runs', gKm: 'km', gVert: 'vert m', gMax: 'km/h', gTogether: '{a} and {b}: {t} within 50 m', gLifts: ' · shared lift rides: {n}',
+      gAll: 'All together: {t}', gNoDuel: 'No piste was skied in full by at least two people, so there is no duel.', gFastest: 'Fastest on the pistes',
+      gNeed2: 'Choose recordings of at least two people.',
     },
   };
   let lang = 'hr';
@@ -542,6 +682,35 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       if (cmd === 'radarMap') return JSON.parse(call('import json\njson.dumps(M.radar_map(_a, _m, _v))', { _a: extra.answer, _m: extra.me || '', _v: extra.view || 'friends' }));
       if (cmd === 'videoBegin') return JSON.parse(call('import json\njson.dumps(M.video_begin(_s))', { _s: extra.seconds || 20 }));
       if (cmd === 'videoNext') return JSON.parse(call('import json\njson.dumps(M.video_next(_c))', { _c: extra.count || 10 }));
+      // 3.6: pasoš, grupni dan, 3D reljef
+      const pair = (code, vars) => { const o = call(code, vars); const name = o.get(0), bytes = o.get(1).toJs(); o.destroy(); return { name, bytes }; };
+      if (cmd === 'passportRecord') return JSON.parse(call('import json\njson.dumps(M.passport_record())'));
+      if (cmd === 'passportClean') return JSON.parse(call('import json\njson.dumps(M._records(_r))', { _r: extra.records }));
+      if (cmd === 'passportFiles') {
+        const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
+        return JSON.parse(call(`import json
+files = [(str(n), bytes(b.to_py())) for n, b in _files]
+json.dumps(M.passport_files(files, _r, _tz))`, { _files: files, _r: extra.records, _tz: extra.tz || 'Europe/Zagreb' }));
+      }
+      if (cmd === 'passportView') return JSON.parse(call('import json\njson.dumps(M.passport_view(_r, _s))', { _r: extra.records, _s: extra.slug || '' }));
+      if (cmd === 'passportPoster') return pair('M.passport_poster(_r, _s)', { _r: extra.records, _s: extra.slug });
+      if (cmd === 'groupAnalyze') {
+        const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
+        return JSON.parse(call(`import json
+files = [(str(n), bytes(b.to_py())) for n, b in _files]
+names = [str(x) for x in _names]
+json.dumps(M.group_analyze(files, names, _tz))`, { _files: files, _names: extra.names, _tz: extra.tz || 'Europe/Zagreb' }));
+      }
+      if (cmd === 'groupPoster') return pair('M.group_poster()');
+      if (cmd === 'groupDuel') return pair('M.group_duel(_p, _a, _b)', { _p: extra.piste || '', _a: extra.a, _b: extra.b });
+      if (cmd === 'reliefPlan') return JSON.parse(call('import json\njson.dumps(M.relief_plan(_w, _x))', { _w: extra.w, _x: extra.x }));
+      if (cmd === 'reliefBuild') {
+        const tiles = extra.tiles.map((q) => [q.z, q.x, q.y, q.w, q.h, q.rgba]);
+        return JSON.parse(call(`import json
+tiles = [(int(z), int(x), int(y), int(w), int(h), bytes(b.to_py())) for z, x, y, w, h, b in _tiles]
+json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: extra.x }));
+      }
+      if (cmd === 'reliefZip') return pair('M.relief_zip()');
       const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? call('M.day_page()') : call('M.pdf(True)');
       const name = out.get(0), bytes = out.get(1).toJs();
       out.destroy();
@@ -1102,6 +1271,252 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
   updateButtons = function () { radarUpdate(); $('rOtrc').disabled = !ready; $('rShow').disabled = !ready; };
   radarLoad();
 
+
+  // ---------------------------------------------------------------- 3.6: 3D reljef dana
+  let relOut = null, relBusy = false;
+  async function tileRgba(url) {
+    const res = await withTimeout(fetch(url, { mode: 'cors' }), 45000, 'timeout');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(bmp, 0, 0);
+    const px = g.getImageData(0, 0, bmp.width, bmp.height).data;
+    return { w: bmp.width, h: bmp.height, rgba: new Uint8Array(px.buffer.slice(0)) };
+  }
+  $('relMake').addEventListener('click', async () => {
+    if (!analyzed || busy) return;
+    busy = true; relBusy = true; updateButtons(); relOut = null;
+    $('relPrev').classList.add('hidden'); $('relSave').classList.add('hidden');
+    const msg = $('relMsg'); msg.className = 'msg';
+    const w = $('relW').value, x = $('relX').value;
+    try {
+      const plan = await ask('reliefPlan', { w, x });
+      const tiles = [];
+      for (let i = 0; i < plan.tiles.length; i++) {
+        msg.textContent = t('relPlan', { i: i + 1, n: plan.tiles.length });
+        const q = plan.tiles[i];
+        let got;
+        try { got = await tileRgba(q.url); }
+        catch (err) { throw new Error(t('relNet', { why: (err && err.message) || err })); }
+        tiles.push({ z: q.z, x: q.x, y: q.y, w: got.w, h: got.h, rgba: got.rgba });
+      }
+      msg.textContent = t('relBuild');
+      const info = await ask('reliefBuild', { tiles, w, x });
+      relOut = true;
+      $('relImg').src = 'data:image/png;base64,' + info.preview;
+      $('relPrev').classList.remove('hidden'); $('relSave').classList.remove('hidden');
+      msg.textContent = t('relInfo', { w: int0(info.size_mm[0]), h: int0(info.size_mm[1]), tri: int0(info.triangles), px: num1(info.pixel_m) });
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
+    finally { busy = false; relBusy = false; updateButtons(); }
+  });
+  $('relSave').addEventListener('click', async () => {
+    try { const r = await ask('reliefZip'); await save(r.name, r.bytes, 'application/zip', $('relMsg')); }
+    catch (err) { $('relMsg').className = 'msg err'; $('relMsg').textContent = err.message; }
+  });
+
+  // ---------------------------------------------------------------- 3.6: pasoš skijališta (u ovom pregledniku)
+  const PAS_KEY = 'skikarta.pasos';
+  const daysWord = (n) => (lang === 'en' ? (n === 1 ? 'day' : 'days') : (n % 10 === 1 && n % 100 !== 11 ? 'dan' : 'dana'));
+  let pasFiles = [], pasBusy = false, pasSlug = '', pasOut = null;
+  function pasLoad() { try { const v = JSON.parse(localStorage.getItem(PAS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } }
+  function pasStore(list) { try { localStorage.setItem(PAS_KEY, JSON.stringify(list)); return true; } catch (_) { return false; } }
+  function pasMerge(list, rec) { return list.filter((r) => r.key !== rec.key).concat([rec]).sort((a, b) => (a.date + a.key).localeCompare(b.date + b.key)); }
+  async function pasRefresh() {
+    const list = pasLoad();
+    pasOut = null; $('pasPrev').classList.add('hidden'); $('pasSave').classList.add('hidden');
+    if (!ready) return;
+    if (!list.length) { $('pasBody').classList.add('hidden'); $('pasOutMsg').className = 'msg muted'; $('pasOutMsg').textContent = t('pasEmpty'); return; }
+    try {
+      const v = await ask('passportView', { records: JSON.stringify(list), slug: pasSlug });
+      $('pasOutMsg').textContent = '';
+      if (!v.pas) { $('pasBody').classList.add('hidden'); $('pasOutMsg').textContent = t('pasEmpty'); return; }
+      pasSlug = v.slug;
+      const sel = $('pasResort'); sel.innerHTML = '';
+      v.resorts.forEach((r) => { const o = document.createElement('option'); o.value = r.slug; o.textContent = t('pasOption', { name: r.name, n: r.days, days: daysWord(r.days) }); sel.append(o); });
+      sel.value = pasSlug;
+      const p = v.pas, tt = p.totals;
+      $('pasTiles').innerHTML = '';
+      [[tt.pistes_done + ' / ' + tt.pistes, t('pDone')], [String(tt.pistes_started), t('pStarted')],
+       [tt.lifts_ridden + ' / ' + tt.lifts, t('pLifts')], [num1(tt.km_covered) + ' / ' + num1(tt.km_total), t('pKm')]].forEach(([b, l], i) => {
+        const d = document.createElement('div'); d.className = 'tile' + (i === 0 ? ' hot' : '');
+        const bb = document.createElement('b'); bb.textContent = b; const sp = document.createElement('span'); sp.textContent = l; d.append(bb, sp); $('pasTiles').append(d);
+      });
+      const bl = $('pasBadgeList'); bl.innerHTML = '';
+      p.badges.forEach((b) => { const s = document.createElement('span'); s.className = b.earned ? 'on' : ''; s.textContent = (b.earned ? '✓ ' : '') + b.title; const i = document.createElement('i'); i.textContent = b.progress; s.append(i); bl.append(s); });
+      const ul = $('pasSuggest'); ul.innerHTML = '';
+      (p.suggest_text.length ? p.suggest_text : [t('pNone')]).forEach((x) => { const li = document.createElement('li'); li.textContent = x; ul.append(li); });
+      $('pasBody').classList.remove('hidden');
+    } catch (err) { $('pasOutMsg').className = 'msg err'; $('pasOutMsg').textContent = err.message; }
+  }
+  $('pasResort').addEventListener('change', () => { pasSlug = $('pasResort').value; pasRefresh(); });
+  $('pasGpx').addEventListener('change', (e) => {
+    pasFiles = Array.from(e.target.files || []);
+    $('pasFileList').textContent = pasFiles.length ? pasFiles.map((f) => f.name).join(', ') : t('noFiles'); updateButtons();
+  });
+  $('pasAdd').addEventListener('click', async () => {
+    pasBusy = true; busy = true; updateButtons(); $('pasMsg').className = 'msg'; $('pasMsg').textContent = t('pasAdding');
+    try {
+      const payload = await Promise.all(pasFiles.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
+      const r = await ask('passportFiles', { files: payload, records: JSON.stringify(pasLoad()), tz });
+      if (!pasStore(r.records)) throw new Error(t('noSave'));
+      $('pasMsg').textContent = t('pasDone', { n: r.added }) + (r.skipped.length ? t('pasSkipped', { list: r.skipped.join(', ') }) : '');
+    } catch (err) { $('pasMsg').className = 'msg err'; $('pasMsg').textContent = err.message; }
+    finally { pasBusy = false; busy = false; updateButtons(); }
+    pasRefresh();
+  });
+  $('addPassport').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('outMsg').className = 'msg';
+    try {
+      const rec = await ask('passportRecord');
+      const list = pasMerge(pasLoad(), rec);
+      if (!pasStore(list)) throw new Error(t('noSave'));
+      pasSlug = rec.slugs[0];
+      const n = new Set(list.filter((r) => r.slugs.includes(pasSlug)).map((r) => r.date)).size;
+      busy = false; updateButtons(); await pasRefresh();
+      const name = $('pasResort').selectedOptions[0] ? $('pasResort').selectedOptions[0].textContent.split(' · ')[0] : rec.resort;
+      $('outMsg').textContent = t('pasAdded', { resort: name, n, days: daysWord(n) });
+    } catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('pasMake').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('pasOutMsg').className = 'msg'; $('pasOutMsg').textContent = t('drawing');
+    try {
+      pasOut = await ask('passportPoster', { records: JSON.stringify(pasLoad()), slug: pasSlug });
+      $('pasImg').src = URL.createObjectURL(new Blob([pasOut.bytes], { type: 'image/png' }));
+      $('pasPrev').classList.remove('hidden'); $('pasSave').classList.remove('hidden'); $('pasOutMsg').textContent = '';
+    } catch (err) { $('pasOutMsg').className = 'msg err'; $('pasOutMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('pasSave').addEventListener('click', () => pasOut && save(pasOut.name, pasOut.bytes, 'image/png', $('pasOutMsg')));
+  $('pasExport').addEventListener('click', () => {
+    const body = new TextEncoder().encode(JSON.stringify(pasLoad()));
+    save('SkiKarta_pasos.json', body, 'application/json', $('pasOutMsg'));
+  });
+  $('pasImportFile').addEventListener('change', async (e) => {
+    const f = (e.target.files || [])[0]; e.target.value = '';
+    if (!f) return;
+    try {
+      const got = JSON.parse(await f.text());
+      const clean = await ask('passportClean', { records: JSON.stringify(got) });
+      if (!clean.length) throw new Error(t('pasBadFile'));
+      let list = pasLoad(); clean.forEach((r) => { list = pasMerge(list, r); });
+      if (!pasStore(list)) throw new Error(t('noSave'));
+      $('pasOutMsg').className = 'msg'; await pasRefresh(); const nd = new Set(list.map((r) => r.date)).size; $('pasOutMsg').textContent = t('pasImported', { n: nd, days: daysWord(nd) });
+    } catch (err) { $('pasOutMsg').className = 'msg err'; $('pasOutMsg').textContent = (err instanceof SyntaxError) ? t('pasBadFile') : err.message; }
+  });
+  $('pasClear').addEventListener('click', async () => {
+    if (!confirm(t('pasConfirm'))) return;
+    try { localStorage.removeItem(PAS_KEY); } catch (_) {}
+    pasSlug = ''; await pasRefresh(); $('pasOutMsg').className = 'msg'; $('pasOutMsg').textContent = t('pasCleared');
+  });
+
+  // ---------------------------------------------------------------- 3.6: grupni dan
+  let grpFiles = [], grpInfo = null, grpOut = null, grpDuelOut = null;
+  function grpDefault(name, i) {
+    const stem = name.replace(/\.[^.]*$/, '').replace(/[_-]+/g, ' ').trim();
+    return stem && !/^\d{4}/.test(stem) ? stem.slice(0, 24) : t('person', { n: i + 1 });
+  }
+  $('grpGpx').addEventListener('change', (e) => {
+    grpFiles = Array.from(e.target.files || []).slice(0, 8);
+    const box = $('grpNames'); box.innerHTML = '';
+    grpFiles.forEach((f, i) => {
+      const l = document.createElement('label'); const sp = document.createElement('span'); sp.textContent = t('grpNameOf', { file: f.name });
+      const inp = document.createElement('input'); inp.className = 'txt'; inp.maxLength = 24; inp.value = grpDefault(f.name, i);
+      l.append(sp, inp); box.append(l);
+    });
+    updateButtons();
+  });
+  function grpShow(info) {
+    grpInfo = info; grpOut = null; grpDuelOut = null;
+    ['grpPrev', 'grpSave', 'grpDuelPrev', 'grpDuelSave'].forEach((id) => $(id).classList.add('hidden'));
+    $('grpResort').textContent = info.resort; $('grpDate').textContent = info.date;
+    const tb = document.createElement('table'); tb.className = 'gt';
+    const hr = document.createElement('tr');
+    ['', t('gRuns'), t('gKm'), t('gVert'), t('gMax')].forEach((h) => { const th = document.createElement('th'); th.textContent = h; hr.append(th); });
+    tb.append(hr);
+    const best = {}; ['runs', 'km', 'descent', 'max_kmh'].forEach((k) => { best[k] = Math.max(...info.people.map((p) => p[k])); });
+    info.people.forEach((p) => {
+      const tr = document.createElement('tr');
+      const td0 = document.createElement('td'); const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = p.color;
+      const nm = document.createElement('b'); nm.textContent = p.name; td0.append(dot, nm); tr.append(td0);
+      [['runs', String(p.runs)], ['km', num1(p.km)], ['descent', int0(p.descent)], ['max_kmh', num1(p.max_kmh)]].forEach(([k, v]) => {
+        const td = document.createElement('td'); if (p[k] === best[k]) { const b = document.createElement('b'); b.textContent = v; td.append(b); } else td.textContent = v; tr.append(td);
+      });
+      tb.append(tr);
+    });
+    $('grpTable').innerHTML = ''; $('grpTable').append(tb);
+    const facts = $('grpFacts'); facts.innerHTML = '';
+    const line = (text, cls) => { const d = document.createElement('div'); d.textContent = text; if (cls) d.className = cls; d.style.margin = '3px 0'; facts.append(d); };
+    info.pairs.slice(0, 3).forEach((r) => line(t('gTogether', { a: r.a, b: r.b, t: r.together }) + (r.lifts ? t('gLifts', { n: r.lifts }) : '')));
+    if (info.all_together) line(t('gAll', { t: info.all_together }));
+    if (info.duels.length) {
+      const h = document.createElement('h3'); h.className = 'sub'; h.textContent = t('gFastest'); facts.append(h);
+      info.duels.slice(0, 6).forEach((d) => line(d.piste + ' — ' + d.rows.map((r) => r.name + ' ' + (r.gap || r.time)).join(', ')));
+    }
+    $('grpDuelBox').classList.toggle('hidden', !info.duels.length);
+    if (!info.duels.length) line(t('gNoDuel'), 'muted');
+    const ps = $('grpPiste'); ps.innerHTML = '';
+    info.duels.forEach((d) => { const o = document.createElement('option'); o.value = d.piste; o.textContent = d.piste + ' (' + d.rows.length + ')'; ps.append(o); });
+    if (info.default) ps.value = info.default.piste;
+    grpPeople(info.default ? info.default.a : 0, info.default ? info.default.b : 1);
+    $('grpBody').classList.remove('hidden');
+  }
+  function grpPeople(a, b) {
+    const d = grpInfo && grpInfo.duels.find((x) => x.piste === $('grpPiste').value);
+    [['grpA', a], ['grpB', b]].forEach(([id, v]) => {
+      const sel = $(id); sel.innerHTML = '';
+      (d ? d.rows : []).forEach((r) => { const o = document.createElement('option'); o.value = r.i; o.textContent = r.name + ' · ' + r.time; sel.append(o); });
+      if (Array.from(sel.options).some((o) => +o.value === v)) sel.value = String(v);
+    });
+    if ($('grpA').value === $('grpB').value && $('grpB').options.length > 1) $('grpB').selectedIndex = $('grpA').selectedIndex === 0 ? 1 : 0;
+  }
+  $('grpPiste').addEventListener('change', () => { grpPeople(-1, -1); $('grpDuelPrev').classList.add('hidden'); $('grpDuelSave').classList.add('hidden'); });
+  ['grpA', 'grpB'].forEach((id) => $(id).addEventListener('change', () => { $('grpDuelPrev').classList.add('hidden'); $('grpDuelSave').classList.add('hidden'); }));
+  $('grpAnalyze').addEventListener('click', async () => {
+    if (grpFiles.length < 2) { $('grpMsg').className = 'msg err'; $('grpMsg').textContent = t('gNeed2'); return; }
+    busy = true; updateButtons(); $('grpBody').classList.add('hidden'); $('grpMsg').className = 'msg'; $('grpMsg').textContent = t('grpAnalyzing');
+    try {
+      const payload = await Promise.all(grpFiles.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
+      const names = Array.from($('grpNames').querySelectorAll('input')).map((x) => x.value.trim());
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
+      grpShow(await ask('groupAnalyze', { files: payload, names, tz })); $('grpMsg').textContent = '';
+    } catch (err) { $('grpMsg').className = 'msg err'; $('grpMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('grpMake').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('grpOutMsg').className = 'msg'; $('grpOutMsg').textContent = t('drawing');
+    try {
+      grpOut = await ask('groupPoster');
+      $('grpImg').src = URL.createObjectURL(new Blob([grpOut.bytes], { type: 'image/png' }));
+      $('grpPrev').classList.remove('hidden'); $('grpSave').classList.remove('hidden'); $('grpOutMsg').textContent = '';
+    } catch (err) { $('grpOutMsg').className = 'msg err'; $('grpOutMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('grpSave').addEventListener('click', () => grpOut && save(grpOut.name, grpOut.bytes, 'image/png', $('grpOutMsg')));
+  $('grpDuelMake').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('grpOutMsg').className = 'msg'; $('grpOutMsg').textContent = t('drawing');
+    try {
+      grpDuelOut = await ask('groupDuel', { piste: $('grpPiste').value, a: +$('grpA').value, b: +$('grpB').value });
+      $('grpDuelImg').src = URL.createObjectURL(new Blob([grpDuelOut.bytes], { type: 'image/png' }));
+      $('grpDuelPrev').classList.remove('hidden'); $('grpDuelSave').classList.remove('hidden'); $('grpOutMsg').textContent = '';
+    } catch (err) { $('grpOutMsg').className = 'msg err'; $('grpOutMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('grpDuelSave').addEventListener('click', () => grpDuelOut && save(grpDuelOut.name, grpDuelOut.bytes, 'image/png', $('grpOutMsg')));
+  const v36Update = updateButtons;
+  updateButtons = function () {
+    v36Update();
+    $('addPassport').disabled = busy || !analyzed;
+    $('relMake').disabled = busy || !analyzed;
+    $('pasAdd').disabled = !ready || busy || !pasFiles.length;
+    ['pasMake', 'pasExport', 'pasClear'].forEach((id) => { $(id).disabled = busy || !ready; });
+    $('grpAnalyze').disabled = !ready || busy || grpFiles.length < 2;
+    ['grpMake', 'grpDuelMake'].forEach((id) => { $(id).disabled = busy || !grpInfo; });
+  };
+  const v36Ready = setInterval(() => { if (ready) { clearInterval(v36Ready); updateButtons(); pasRefresh(); } }, 400);
+
   // ---------------------------------------------------------------- promjena jezika
   async function setLang(next) {
     if (next === lang) return;
@@ -1110,8 +1525,9 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
     try { localStorage.setItem('skikarta.lang', lang); } catch (_) {}
     applyLang();
     // postera nacrtanih na prethodnom jeziku više nema; sličice se crtaju ponovno
-    poster = null; tripPoster = null; photoOut = null; photoQueue = [];
-    ['preview', 'savePoster', 'tripPreview', 'tripSave', 'photoPreview', 'photoSave'].forEach((id) => $(id).classList.add('hidden'));
+    poster = null; tripPoster = null; photoOut = null; photoQueue = []; pasOut = null; grpOut = null; grpDuelOut = null;
+    ['preview', 'savePoster', 'tripPreview', 'tripSave', 'photoPreview', 'photoSave', 'pasPrev', 'pasSave', 'grpPrev', 'grpSave',
+     'grpDuelPrev', 'grpDuelSave'].forEach((id) => $(id).classList.add('hidden'));
     $('outMsg').textContent = ''; $('tripOutMsg').textContent = '';
     if (!ready) { radarAfterLang(); return; }   // Python dobiva jezik pri pokretanju
     iconQueue.length = 0; tripToken++; tripQueue = [];
@@ -1129,6 +1545,8 @@ json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Euro
       busy = false; tripBusy = false; updateButtons();
       if (r.styles) showStyles(r.styles);
       if (r.photo && photoLoaded) showPhoto(r.photo);
+      if (r.group) { const pv = [$('grpPiste').value, +$('grpA').value, +$('grpB').value]; grpShow(r.group); $('grpPiste').value = pv[0]; grpPeople(pv[1], pv[2]); }
+      await pasRefresh();
     } catch (err) {
       $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
     } finally { busy = false; tripBusy = false; updateButtons(); }
