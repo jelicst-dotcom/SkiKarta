@@ -1,7 +1,7 @@
 /* SkiKarta: rad bez interneta (2.9). Datoteku sw.js stvara napravi_web.py; verzija se računa iz sadržaja.
    Stranica, paketi (karte, profili, kod, fontovi) spremaju se pri instalaciji; Python (Pyodide) i fontovi
    s mreže spremaju se pri prvom učitavanju (stranica ih sama upiše u predmemoriju kad je spremna). */
-const VERSION = "6aa33a138cb6";
+const VERSION = "b37d1517f855";
 const APP = "skikarta-app-" + VERSION;
 const CDN = "skikarta-cdn-v1";   // Pyodide ne mijenja se s verzijom aplikacije
 const SHELL = ["index.html", "manifest.json", "ikona-192.png", "ikona-512.png"];
@@ -54,8 +54,28 @@ async function cacheFirst(request, cacheName) {
   return response;
 }
 
+// 3.7: „Podijeli → SkiKarta” (Web Share Target): GPX iz druge aplikacije stiže kao POST na ./podijeli.
+// Datoteke se spremaju u zasebnu predmemoriju, a stranica ih preuzme (?podijeljeno=n) i odmah briše.
+const SHARED = "skikarta-podijeljeno";
+async function receiveShare(request) {
+  const form = await request.formData();
+  const cache = await caches.open(SHARED);
+  let n = 0;
+  for (const file of form.getAll("gpx")) {
+    if (!file || typeof file === "string") continue;
+    const key = new URL(`podijeljeno/${Date.now()}-${n}?ime=${encodeURIComponent(file.name || "zapis.gpx")}`, self.registration.scope);
+    await cache.put(key, new Response(file));
+    n += 1;
+  }
+  return Response.redirect(new URL(`index.html?podijeljeno=${n}`, self.registration.scope).href, 303);
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
+  if (request.method === "POST" && new URL(request.url).pathname.endsWith("/podijeli")) {
+    event.respondWith(receiveShare(request));
+    return;
+  }
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin === self.location.origin) {

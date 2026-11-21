@@ -98,6 +98,16 @@
   .names label { display:grid; grid-template-columns:1fr; gap:2px; font-size:12px; color:var(--muted); }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .two select { margin:0; }
+  .heremap svg { width:100%; height:auto; display:block; border-radius:14px; margin-top:10px; background:var(--snow); }
+  .herel { margin:8px 0 0; font-size:15px; }
+  .herel b { font-weight:700; }
+  .nt { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+  .nt th { text-align:right; color:var(--muted); font-weight:600; padding:4px 2px; font-size:12px; }
+  .nt th:first-child, .nt td:first-child { text-align:left; }
+  .nt td { text-align:right; padding:6px 2px; border-top:1px solid var(--line); }
+  .nt tr.on td { font-weight:700; }
+  .plist { font-size:13px; color:var(--muted); margin:6px 0 0; }
+  .wxline { margin:8px 0 0; font-size:14px; }
 </style>
 </head>
 <body>
@@ -130,6 +140,7 @@
     <div class="head"><h3 id="resort"></h3><div class="muted" id="day"></div></div>
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="longest" style="margin:10px 0 0"></p>
+    <p class="wxline muted" id="wxLine"></p>
     <details class="extras hidden" id="extrasBox"><summary data-i="extras">Dodatno o danu</summary><div id="extras"></div></details>
     <button class="ghost" id="showMap" type="button" data-i="showMap" style="margin-top:12px">Karta dana</button>
     <div class="daymap hidden" id="dayMap"><iframe id="dayFrame" title="Karta dana" data-alt="showMap"></iframe></div>
@@ -172,6 +183,12 @@
       <button class="ghost" id="addPassport" data-i="addPas">Dodaj ovaj dan u pasoš skijališta</button>
     </div>
     <div class="msg" id="outMsg"></div>
+    <details class="extras" id="dayPhotosBox"><summary data-i="dpSum">Fotke na karti dana</summary>
+      <p class="muted" data-i="dpNote" style="margin:8px 0">Fotke s mobitela (JPG ili HEIC s iPhonea) stavljaju se na kartu dana po vremenu snimanja. Vide se na „Karti dana” i u spremljenoj stranici dana.</p>
+      <label class="file"><span data-i="dpPick">Odaberi fotke…</span><input id="dpFiles" type="file" accept="image/*,.heic,.heif,.jpg,.jpeg,.png" multiple></label>
+      <button class="ghost" id="dpClear" data-i="dpClear">Ukloni fotke s karte</button>
+      <div class="msg" id="dpMsg"></div>
+    </details>
     <details class="extras" id="reliefBox"><summary data-i="relSum">3D reljef dana za ispis (STL)</summary>
       <p class="muted" data-i="relNote" style="margin:8px 0">Teren oko tvog traga s urezanim tragom dana, za 3D pisač. Teren se preuzima s Mapterhorna (treba internet, nekoliko MB), a model se računa na ovom uređaju.</p>
       <div class="two"><select id="relW" data-aria="relWAria" aria-label="Veličina"><option value="100">100 mm</option><option value="150" selected>150 mm</option><option value="200">200 mm</option></select>
@@ -209,6 +226,27 @@
       <div class="msg" id="tripOutMsg"></div>
     </div>
   </div>
+  <div class="card" id="hereCard">
+    <h2><span class="step">+</span><span data-i="hHere">Ja na karti</span></h2>
+    <p class="muted" data-i="hereNote" style="margin:0 0 10px">Tvoj položaj na karti skijališta, uz koju si stazu i koliko su daleko donje stanice žičara. Radi bez interneta dok su stranica i ekran upaljeni; položaj nikamo ne odlazi.</p>
+    <div class="pair" style="grid-template-columns:1fr 1fr"><button class="primary" id="hereStart" data-i="hereStart">Pokaži gdje sam</button>
+      <select id="hereView" data-aria="hereViewAria" aria-label="Prikaz"><option value="friends" data-i="hereNear">Oko mene</option><option value="resort" data-i="hereAll">Cijelo skijalište</option></select></div>
+    <div class="msg" id="hereMsg"></div>
+    <div class="herel" id="hereWhere"></div>
+    <div class="heremap" id="hereMap"></div>
+  </div>
+  <div class="card" id="netCard">
+    <h2><span class="step">+</span><span data-i="hNet">Za početnike: mreža skijališta</span></h2>
+    <p class="muted" data-i="netNote" style="margin:0 0 10px">Koliko se skijališta može obići samo plavim (ili plavim i crvenim) stazama. Krug je skup žičara između kojih se može kružiti tom razinom; računa se iz karte skijališta (smjer staza po visini terena, spojevi do 50 m).</p>
+    <button class="ghost" id="netCompare" data-i="netCompare">Usporedi sva skijališta</button>
+    <div id="netTable"></div>
+    <div class="two" style="margin-top:10px"><select id="netResort" data-aria="pasResortAria" aria-label="Skijalište"></select>
+      <select id="netLevel" data-aria="netLevelAria" aria-label="Razina"><option value="easy" data-i="netEasy">Plave</option><option value="intermediate" data-i="netMid">Plave i crvene</option></select></div>
+    <div class="msg" id="netMsg"></div>
+    <div class="preview hidden" id="netPrev"><img id="netImg" data-alt="hNet" alt="Mreža skijališta"></div>
+    <div class="plist" id="netNoWay"></div>
+    <div class="plist" id="netPistes"></div>
+  </div>
   <div class="card" id="pasCard">
     <h2><span class="step">+</span><span data-i="hPas">Pasoš skijališta</span></h2>
     <p class="muted" data-i="pasNote" style="margin:0 0 10px">Koliko si staza i žičara skijališta prošao kroz sve dane i godine. Staza je osvojena kad skijaš barem 85 % njezine duljine (zbroj svih dana). Pasoš se pamti samo u ovom pregledniku.</p>
@@ -228,6 +266,10 @@
         <div class="preview hidden" id="pasPrev"><img id="pasImg" data-alt="altPas" alt="Pasoš skijališta"></div>
         <button class="dark hidden" id="pasSave" data-i="savePng">Spremi poster (PNG)</button>
       </div>
+      <h3 class="sub" data-i="seaH">Poster sezone</h3>
+      <div class="pair"><select id="seaKey" data-aria="seaAria" aria-label="Sezona"></select><button class="primary" id="seaMake" data-i="seaMake">Napravi</button></div>
+      <div class="preview hidden" id="seaPrev"><img id="seaImg" data-alt="seaH" alt="Poster sezone"></div>
+      <button class="dark hidden" id="seaSave" data-i="savePng">Spremi poster (PNG)</button>
     </div>
     <details class="extras"><summary data-i="pasCopy">Kopija pasoša</summary>
       <p class="muted" data-i="pasCopyNote" style="margin:8px 0">Pasoš je samo u ovom pregledniku. Spremi kopiju da ga preneseš na drugi uređaj ili sačuvaš ako brišeš podatke preglednika.</p>
@@ -393,7 +435,19 @@
       grpDuel: 'Dvoboj na stazi', grpAAria: 'Prva osoba', grpBAria: 'Druga osoba', grpDuelMake: 'Napravi poster dvoboja', altDuel: 'Dvoboj na stazi',
       gRuns: 'spustovi', gKm: 'km', gVert: 'spust m', gMax: 'km/h', gTogether: '{a} i {b}: {t} na ≤ 50 m', gLifts: ' · istih vožnji žičarom: {n}',
       gAll: 'Svi zajedno: {t}', gNoDuel: 'Nijednu stazu nisu cijelu prošle barem dvije osobe, pa nema dvoboja.', gFastest: 'Najbrži po stazama',
-      gNeed2: 'Odaberi zapise barem dvije osobe.',
+      gNeed2: 'Odaberi zapise barem dvije osobe.', shared: 'Primljeno zapisa: {n}. Analiziram…',
+      wxLoading: 'Dohvaćam vrijeme dana s Open-Meteo…', wxNo: 'Vrijeme dana nije dohvaćeno ({why}).', wxSrc: 'Vrijeme (model Open-Meteo): {text}',
+      dpSum: 'Fotke na karti dana', dpNote: 'Fotke s mobitela (JPG ili HEIC s iPhonea) stavljaju se na kartu dana po vremenu snimanja. Vide se na „Karti dana” i u spremljenoj stranici dana.',
+      dpPick: 'Odaberi fotke…', dpClear: 'Ukloni fotke s karte', dpBusy: 'Fotka {i}/{n}…', dpDone: 'Na karti: {ok}.', dpSkip: ' Nije stavljeno: {list}.',
+      dpNoThumb: ' Za HEIC ovaj preglednik ne zna napraviti sličicu: točka je na karti, a sliku prikaže Safari.', dpCleared: 'Fotke su uklonjene s karte.',
+      hHere: 'Ja na karti', hereNote: 'Tvoj položaj na karti skijališta, uz koju si stazu i koliko su daleko donje stanice žičara. Radi bez interneta dok su stranica i ekran upaljeni; položaj nikamo ne odlazi.',
+      hereStart: 'Pokaži gdje sam', hereStop: 'Zaustavi', hereViewAria: 'Prikaz', hereNear: 'Oko mene', hereAll: 'Cijelo skijalište',
+      hereWait: 'Čekam GPS…', hereNoGeo: 'Ovaj preglednik ne daje položaj.', hereDenied: 'Položaj nije dopušten. Dopusti lokaciju za ovu stranicu u postavkama preglednika.',
+      hereErr: 'Položaj nije dostupan ({why}).', hereLifts: 'Najbliže donje stanice:', hereOnLift: 'Na žičari:',
+      hNet: 'Za početnike: mreža skijališta', netNote: 'Koliko se skijališta može obići samo plavim (ili plavim i crvenim) stazama. Krug je skup žičara između kojih se može kružiti tom razinom; računa se iz karte skijališta (smjer staza po visini terena, spojevi do 50 m).',
+      netCompare: 'Usporedi sva skijališta', netLevelAria: 'Razina', netEasy: 'Plave', netMid: 'Plave i crvene', netComputing: 'Računam mrežu…',
+      netCols: 'Skijalište|plavi krug km|žičara|plave+crvene km', netNoWay: 'S vrha ovih žičara nema silaska tom razinom: {list}.', netPistes: 'Staze kruga: {list}.',
+      seaH: 'Poster sezone', seaAria: 'Sezona', seaMake: 'Napravi', seaOpt: '{label} · {n} {days}',
     },
     en: {
       title: 'SkiKarta – report and poster',
@@ -477,7 +531,19 @@
       grpDuel: 'Piste duel', grpAAria: 'First person', grpBAria: 'Second person', grpDuelMake: 'Make the duel poster', altDuel: 'Piste duel',
       gRuns: 'runs', gKm: 'km', gVert: 'vert m', gMax: 'km/h', gTogether: '{a} and {b}: {t} within 50 m', gLifts: ' · shared lift rides: {n}',
       gAll: 'All together: {t}', gNoDuel: 'No piste was skied in full by at least two people, so there is no duel.', gFastest: 'Fastest on the pistes',
-      gNeed2: 'Choose recordings of at least two people.',
+      gNeed2: 'Choose recordings of at least two people.', shared: 'Recordings received: {n}. Analysing…',
+      wxLoading: 'Fetching the weather of the day from Open-Meteo…', wxNo: 'The weather of the day was not fetched ({why}).', wxSrc: 'Weather (Open-Meteo model): {text}',
+      dpSum: 'Photos on the day map', dpNote: 'Phone photos (JPG or iPhone HEIC) are placed on the day map by capture time. They show on “Day map” and in the saved day page.',
+      dpPick: 'Choose photos…', dpClear: 'Remove photos from the map', dpBusy: 'Photo {i}/{n}…', dpDone: 'On the map: {ok}.', dpSkip: ' Not placed: {list}.',
+      dpNoThumb: ' This browser cannot make a thumbnail of HEIC: the point is on the map and Safari shows the picture.', dpCleared: 'The photos are removed from the map.',
+      hHere: 'Me on the map', hereNote: 'Your position on the resort map, which piste you are next to and how far the lift bottom stations are. Works offline while the page and the screen are on; the position goes nowhere.',
+      hereStart: 'Show where I am', hereStop: 'Stop', hereViewAria: 'View', hereNear: 'Around me', hereAll: 'Whole resort',
+      hereWait: 'Waiting for GPS…', hereNoGeo: 'This browser does not provide a position.', hereDenied: 'Location is not allowed. Allow location for this page in the browser settings.',
+      hereErr: 'The position is not available ({why}).', hereLifts: 'Nearest lift bottom stations:', hereOnLift: 'On a lift:',
+      hNet: 'For beginners: resort network', netNote: 'How much of a resort you can ski with only blue (or blue and red) pistes. A loop is a set of lifts you can circle between at that level; computed from the resort map (piste direction from terrain height, links up to 50 m).',
+      netCompare: 'Compare all resorts', netLevelAria: 'Level', netEasy: 'Blue', netMid: 'Blue and red', netComputing: 'Computing the network…',
+      netCols: 'Resort|blue loop km|lifts|blue+red km', netNoWay: 'No way down at this level from the top of: {list}.', netPistes: 'Pistes of the loop: {list}.',
+      seaH: 'Season poster', seaAria: 'Season', seaMake: 'Make', seaOpt: '{label} · {n} {days}',
     },
   };
   let lang = 'hr';
@@ -711,6 +777,16 @@ tiles = [(int(z), int(x), int(y), int(w), int(h), bytes(b.to_py())) for z, x, y,
 json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: extra.x }));
       }
       if (cmd === 'reliefZip') return pair('M.relief_zip()');
+      // 3.7
+      if (cmd === 'weatherRequest') return JSON.parse(call('import json\njson.dumps(M.weather_request())'));
+      if (cmd === 'weatherSet') return JSON.parse(call('import json\nw = M.weather_set(_t)\njson.dumps({"weather": w, "summary": M.summary()})', { _t: extra.text }));
+      if (cmd === 'dayPhoto') return JSON.parse(call('import json\njson.dumps(M.day_photo_add(_n, bytes(_b.to_py()), bytes(_th.to_py()) if _th is not None else None))', { _n: extra.name, _b: extra.bytes, _th: extra.thumb || null }));
+      if (cmd === 'dayPhotoClear') return call('M.day_photo_clear()');
+      if (cmd === 'here') return JSON.parse(call('import json\ntr = [tuple(q) for q in _tr]\njson.dumps(M.here(_la, _lo, _acc, _alt, tr, _now, _v))', { _la: extra.lat, _lo: extra.lon, _acc: extra.acc, _alt: extra.alt, _tr: extra.trail, _now: extra.now, _v: extra.view }));
+      if (cmd === 'netCompare') return JSON.parse(call('import json\njson.dumps(M.network_compare())'));
+      if (cmd === 'netView') return JSON.parse(call('import json\njson.dumps(M.network_view(_s, _l))', { _s: extra.slug, _l: extra.level }));
+      if (cmd === 'seasonList') return JSON.parse(call('import json\njson.dumps(M.season_list(_r))', { _r: extra.records }));
+      if (cmd === 'seasonPoster') return pair('M.season_poster(_r, _k)', { _r: extra.records, _k: extra.key });
       const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? call('M.day_page()') : call('M.pdf(True)');
       const name = out.get(0), bytes = out.get(1).toJs();
       out.destroy();
@@ -753,6 +829,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
       showStyles(info.styles);
       $('photoCard').classList.remove('hidden');
       if (photoLoaded) showPhoto(await ask('photoState'));
+      v37AfterAnalyze();
     } catch (err) {
       $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
     } finally { busy = false; updateButtons(); }
@@ -806,7 +883,13 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
   // 3.3: sličice koje su na zaslonu crtaju se prve (40 stilova na mobitelu traje; vidljive ne čekaju)
   const onScreen = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
   function takeNext(queue, find) { const i = queue.findIndex((x) => onScreen(find(x))); return queue.splice(i >= 0 ? i : 0, 1)[0]; }
+  let drawingIcons = false;   // 3.7.1: samo jedna petlja sličica odjednom
   async function drawIcons() {
+    if (drawingIcons) return;
+    drawingIcons = true;
+    try { await drawIconsLoop(); } finally { drawingIcons = false; }
+  }
+  async function drawIconsLoop() {
     while (iconQueue.length) {
       const n = takeNext(iconQueue, (k) => $('styles').querySelector(`[data-n="${k}"]`));
       const el = $('styles').querySelector(`[data-n="${n}"]`);
@@ -1517,6 +1600,206 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
   };
   const v36Ready = setInterval(() => { if (ready) { clearInterval(v36Ready); updateButtons(); pasRefresh(); } }, 400);
 
+
+  // ---------------------------------------------------------------- 3.7: vrijeme dana (Open-Meteo)
+  let wxSeq = 0;
+  async function v37AfterAnalyze() {
+    $('dpMsg').textContent = ''; $('dpMsg').className = 'msg';
+    const id = ++wxSeq, line = $('wxLine');
+    line.textContent = t('wxLoading');
+    try {
+      const req = await ask('weatherRequest');
+      let body = null;
+      for (const url of [req.url, req.fallback]) {
+        try { const r = await withTimeout(fetch(url), 20000, 'timeout'); if (r.ok) { body = await r.text(); break; } } catch (_) {}
+      }
+      if (id !== wxSeq) return;
+      if (!body) throw new Error(navigator.onLine === false ? 'offline' : 'Open-Meteo');
+      const out = await ask('weatherSet', { text: body });
+      if (id !== wxSeq) return;
+      lastDay = out.summary; showDay(out.summary);
+      line.textContent = t('wxSrc', { text: out.weather.text });
+    } catch (err) { if (id === wxSeq) line.textContent = t('wxNo', { why: (err && err.message) || err }); }
+  }
+
+  // ---------------------------------------------------------------- 3.7: fotke na karti dana (JPG i HEIC)
+  async function thumbOf(file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 640 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.8));
+      return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+    } catch (_) { return null; }   // npr. HEIC u Chromeu
+  }
+  $('dpFiles').addEventListener('change', async (e) => {
+    const list = Array.from(e.target.files || []); e.target.value = '';
+    if (!list.length || !analyzed) return;
+    busy = true; updateButtons();
+    const msg = $('dpMsg'); msg.className = 'msg';
+    const ok = [], bad = []; let noThumb = false;
+    try {
+      for (let i = 0; i < list.length; i++) {
+        msg.textContent = t('dpBusy', { i: i + 1, n: list.length });
+        const f = list[i];
+        const thumb = await thumbOf(f);
+        const r = await ask('dayPhoto', { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()), thumb });
+        if (r.ok) { ok.push(r.clock ? r.clock : r.name); if (!r.thumb) noThumb = true; } else bad.push(r.name + ' (' + r.reason + ')');
+      }
+      pageCache = null; $('dayMap').classList.add('hidden'); $('showMap').textContent = t('showMap');
+      msg.textContent = t('dpDone', { ok: ok.length ? ok.length + ' (' + ok.join(', ') + ')' : '0' }) + (bad.length ? t('dpSkip', { list: bad.join('; ') }) : '') + (noThumb ? t('dpNoThumb') : '');
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('dpClear').addEventListener('click', async () => {
+    await ask('dayPhotoClear'); pageCache = null; $('dayMap').classList.add('hidden'); $('showMap').textContent = t('showMap');
+    $('dpMsg').className = 'msg'; $('dpMsg').textContent = t('dpCleared');
+  });
+
+  // ---------------------------------------------------------------- 3.7: ja na karti (položaj uživo)
+  let hereWatch = null, hereTrail = [], hereLast = 0, hereFix = null, hereBusy = false, hereLock = null;
+  async function hereDraw() {
+    if (!hereFix || hereBusy || !ready) return;
+    hereBusy = true;
+    try {
+      const f = hereFix;
+      const r = await ask('here', { lat: f.lat, lon: f.lon, acc: f.acc, alt: f.alt, trail: hereTrail, now: f.t, view: $('hereView').value });
+      $('hereMap').innerHTML = r.svg;
+      const box = $('hereWhere'); box.textContent = '';
+      const add = (text, bold) => { const d = document.createElement('div'); if (bold) { const b = document.createElement('b'); b.textContent = text; d.append(b); } else d.textContent = text; box.append(d); };
+      if (r.resort) add(r.resort, true);
+      if (r.lift) add(t('hereOnLift') + ' ' + r.lift); else if (r.where) add(r.where);
+      if (r.lifts.length) { add(t('hereLifts')); r.lifts.forEach((x) => add('· ' + x.text)); }
+      $('hereMsg').className = 'msg muted'; $('hereMsg').textContent = r.acc;
+    } catch (err) { $('hereMsg').className = 'msg err'; $('hereMsg').textContent = err.message; }
+    finally { hereBusy = false; }
+  }
+  function hereStop() {
+    if (hereWatch !== null) navigator.geolocation.clearWatch(hereWatch);
+    hereWatch = null; $('hereStart').textContent = t('hereStart');
+    try { if (hereLock) hereLock.release(); } catch (_) {} hereLock = null;
+  }
+  $('hereStart').addEventListener('click', async () => {
+    if (hereWatch !== null) { hereStop(); return; }
+    if (!('geolocation' in navigator)) { $('hereMsg').className = 'msg err'; $('hereMsg').textContent = t('hereNoGeo'); return; }
+    $('hereMsg').className = 'msg'; $('hereMsg').textContent = t('hereWait'); $('hereStart').textContent = t('hereStop');
+    try { if ('wakeLock' in navigator) hereLock = await navigator.wakeLock.request('screen'); } catch (_) {}
+    hereWatch = navigator.geolocation.watchPosition((p) => {
+      const c = p.coords, now = Math.round((p.timestamp || Date.now()) / 1000);
+      hereFix = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, alt: c.altitude, t: now };
+      hereTrail.push([now, c.latitude, c.longitude, c.altitude, c.accuracy]);
+      hereTrail = hereTrail.filter((q) => now - q[0] <= 1800).slice(-400);
+      if (Date.now() - hereLast > 4000) { hereLast = Date.now(); hereDraw(); }
+    }, (err) => {
+      $('hereMsg').className = 'msg err';
+      $('hereMsg').textContent = err.code === 1 ? t('hereDenied') : t('hereErr', { why: err.message || err.code });
+      if (err.code === 1) hereStop();
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  });
+  $('hereView').addEventListener('change', () => hereDraw());
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && hereWatch !== null && 'wakeLock' in navigator) { try { hereLock = await navigator.wakeLock.request('screen'); } catch (_) {} }
+  });
+
+  // ---------------------------------------------------------------- 3.7: početnička mreža
+  let netRows = null;
+  function netTableDraw() {
+    const box = $('netTable'); box.innerHTML = '';
+    if (!netRows) return;
+    const tb = document.createElement('table'); tb.className = 'nt';
+    const hr = document.createElement('tr'); t('netCols').split('|').forEach((h) => { const th = document.createElement('th'); th.textContent = h; hr.append(th); }); tb.append(hr);
+    netRows.forEach((r) => {
+      const tr = document.createElement('tr'); if (r.slug === $('netResort').value) tr.className = 'on';
+      [r.resort, num1(r.easy.loop_km), String(r.easy.loop_lifts), num1(r.intermediate.loop_km)].forEach((v) => { const td = document.createElement('td'); td.textContent = v; tr.append(td); });
+      tr.style.cursor = 'pointer'; tr.addEventListener('click', () => { $('netResort').value = r.slug; netDraw(); });
+      tb.append(tr);
+    });
+    box.append(tb);
+  }
+  async function netFill() {
+    if ($('netResort').options.length || !ready) return;
+    const rows = await ask('netCompare'); netRows = rows;
+    rows.slice().sort((a, b) => a.resort.localeCompare(b.resort)).forEach((r) => { const o = document.createElement('option'); o.value = r.slug; o.textContent = r.resort; $('netResort').append(o); });
+  }
+  async function netDraw() {
+    if (!ready) return;
+    busy = true; updateButtons(); $('netMsg').className = 'msg'; $('netMsg').textContent = t('netComputing');
+    try {
+      await netFill();
+      const r = await ask('netView', { slug: $('netResort').value, level: $('netLevel').value });
+      $('netImg').src = 'data:image/png;base64,' + r.png; $('netPrev').classList.remove('hidden');
+      $('netMsg').textContent = r.text;
+      $('netNoWay').textContent = r.no_way_down.length ? t('netNoWay', { list: r.no_way_down.join(', ') }) : '';
+      $('netPistes').textContent = r.best && r.best.pistes.length ? t('netPistes', { list: r.best.pistes.join(', ') }) : '';
+      if ($('netTable').childNodes.length) netTableDraw();
+    } catch (err) { $('netMsg').className = 'msg err'; $('netMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  }
+  $('netCompare').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('netMsg').className = 'msg'; $('netMsg').textContent = t('netComputing');
+    try { await netFill(); netTableDraw(); $('netMsg').textContent = ''; }
+    catch (err) { $('netMsg').className = 'msg err'; $('netMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('netResort').addEventListener('change', netDraw);
+  $('netLevel').addEventListener('change', netDraw);
+
+  // ---------------------------------------------------------------- 3.7: poster sezone
+  let seaOut = null;
+  async function seaFill() {
+    const sel = $('seaKey'), prev = sel.value; sel.innerHTML = '';
+    const list = pasLoad(); if (!list.length || !ready) return;
+    try {
+      const keys = await ask('seasonList', { records: JSON.stringify(list) });
+      keys.forEach((k) => { const o = document.createElement('option'); o.value = k.key; o.textContent = t('seaOpt', { label: k.label, n: k.days, days: daysWord(k.days) }); sel.append(o); });
+      if (prev && keys.some((k) => k.key === prev)) sel.value = prev;
+    } catch (_) {}
+  }
+  const v37Refresh = pasRefresh;
+  pasRefresh = async function () { await v37Refresh(); seaOut = null; $('seaPrev').classList.add('hidden'); $('seaSave').classList.add('hidden'); await seaFill(); };
+  $('seaMake').addEventListener('click', async () => {
+    if (!$('seaKey').value) return;
+    busy = true; updateButtons(); $('pasOutMsg').className = 'msg'; $('pasOutMsg').textContent = t('drawing');
+    try {
+      seaOut = await ask('seasonPoster', { records: JSON.stringify(pasLoad()), key: $('seaKey').value });
+      $('seaImg').src = URL.createObjectURL(new Blob([seaOut.bytes], { type: 'image/png' }));
+      $('seaPrev').classList.remove('hidden'); $('seaSave').classList.remove('hidden'); $('pasOutMsg').textContent = '';
+    } catch (err) { $('pasOutMsg').className = 'msg err'; $('pasOutMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('seaSave').addEventListener('click', () => seaOut && save(seaOut.name, seaOut.bytes, 'image/png', $('pasOutMsg')));
+
+  // ---------------------------------------------------------------- 3.7: „Podijeli → SkiKarta” (Web Share Target)
+  async function takeShared() {
+    const q = new URLSearchParams(location.search);
+    if (!q.has('podijeljeno')) return;
+    history.replaceState(null, '', location.pathname);
+    try {
+      const cache = await caches.open('skikarta-podijeljeno');
+      const keys = await cache.keys(), got = [];
+      for (const k of keys) {
+        const r = await cache.match(k); const name = decodeURIComponent(new URL(k.url).searchParams.get('ime') || 'zapis.gpx');
+        got.push(new File([await r.blob()], name, { type: 'application/gpx+xml' })); await cache.delete(k);
+      }
+      if (!got.length) return;
+      files = got; fileNames = got.map((f) => f.name); $('fileList').textContent = fileNames.join(', ');
+      $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = t('shared', { n: got.length });
+      const go = setInterval(() => { if (ready && !busy) { clearInterval(go); updateButtons(); $('analyze').click(); } }, 300);
+    } catch (err) { $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message; }
+  }
+  takeShared();
+
+  const v37Update = updateButtons;
+  updateButtons = function () {
+    v37Update();
+    $('dpFiles').disabled = busy || !analyzed; $('dpClear').disabled = busy || !analyzed;
+    $('netCompare').disabled = busy || !ready; $('netResort').disabled = busy || !ready; $('netLevel').disabled = busy || !ready;
+    $('seaMake').disabled = busy || !ready || !$('seaKey').value;
+    $('hereStart').disabled = !ready;
+  };
+  const v37Ready = setInterval(() => { if (ready) { clearInterval(v37Ready); updateButtons(); seaFill(); } }, 400);
+
   // ---------------------------------------------------------------- promjena jezika
   async function setLang(next) {
     if (next === lang) return;
@@ -1534,7 +1817,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     busy = true; tripBusy = true; updateButtons();
     try {
       const r = await ask('lang', { lang });
-      if (r.day) { lastDay = r.day; showDay(r.day); }
+      if (r.day) { lastDay = r.day; showDay(r.day); const wx = (r.day.extras || [])[0]; if ($('wxLine').textContent && wx && /Open-Meteo/.test(wx.label)) $('wxLine').textContent = wx.label + ': ' + wx.value; }
       if (r.trip) {
         const prev = $('tripPiste').value;
         lastTrip = r.trip; showTrip(r.trip);
