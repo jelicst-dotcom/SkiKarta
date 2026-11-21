@@ -1,7 +1,7 @@
 /* SkiKarta: rad bez interneta (2.9). Datoteku sw.js stvara napravi_web.py; verzija se računa iz sadržaja.
    Stranica, paketi (karte, profili, kod, fontovi) spremaju se pri instalaciji; Python (Pyodide) i fontovi
    s mreže spremaju se pri prvom učitavanju (stranica ih sama upiše u predmemoriju kad je spremna). */
-const VERSION = "b37d1517f855";
+const VERSION = "9b3e8ad5934f";
 const APP = "skikarta-app-" + VERSION;
 const CDN = "skikarta-cdn-v1";   // Pyodide ne mijenja se s verzijom aplikacije
 const SHELL = ["index.html", "manifest.json", "ikona-192.png", "ikona-512.png"];

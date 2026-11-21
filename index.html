@@ -101,11 +101,6 @@
   .heremap svg { width:100%; height:auto; display:block; border-radius:14px; margin-top:10px; background:var(--snow); }
   .herel { margin:8px 0 0; font-size:15px; }
   .herel b { font-weight:700; }
-  .nt { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
-  .nt th { text-align:right; color:var(--muted); font-weight:600; padding:4px 2px; font-size:12px; }
-  .nt th:first-child, .nt td:first-child { text-align:left; }
-  .nt td { text-align:right; padding:6px 2px; border-top:1px solid var(--line); }
-  .nt tr.on td { font-weight:700; }
   .plist { font-size:13px; color:var(--muted); margin:6px 0 0; }
   .wxline { margin:8px 0 0; font-size:14px; }
 </style>
@@ -234,18 +229,6 @@
     <div class="msg" id="hereMsg"></div>
     <div class="herel" id="hereWhere"></div>
     <div class="heremap" id="hereMap"></div>
-  </div>
-  <div class="card" id="netCard">
-    <h2><span class="step">+</span><span data-i="hNet">Za početnike: mreža skijališta</span></h2>
-    <p class="muted" data-i="netNote" style="margin:0 0 10px">Koliko se skijališta može obići samo plavim (ili plavim i crvenim) stazama. Krug je skup žičara između kojih se može kružiti tom razinom; računa se iz karte skijališta (smjer staza po visini terena, spojevi do 50 m).</p>
-    <button class="ghost" id="netCompare" data-i="netCompare">Usporedi sva skijališta</button>
-    <div id="netTable"></div>
-    <div class="two" style="margin-top:10px"><select id="netResort" data-aria="pasResortAria" aria-label="Skijalište"></select>
-      <select id="netLevel" data-aria="netLevelAria" aria-label="Razina"><option value="easy" data-i="netEasy">Plave</option><option value="intermediate" data-i="netMid">Plave i crvene</option></select></div>
-    <div class="msg" id="netMsg"></div>
-    <div class="preview hidden" id="netPrev"><img id="netImg" data-alt="hNet" alt="Mreža skijališta"></div>
-    <div class="plist" id="netNoWay"></div>
-    <div class="plist" id="netPistes"></div>
   </div>
   <div class="card" id="pasCard">
     <h2><span class="step">+</span><span data-i="hPas">Pasoš skijališta</span></h2>
@@ -444,9 +427,6 @@
       hereStart: 'Pokaži gdje sam', hereStop: 'Zaustavi', hereViewAria: 'Prikaz', hereNear: 'Oko mene', hereAll: 'Cijelo skijalište',
       hereWait: 'Čekam GPS…', hereNoGeo: 'Ovaj preglednik ne daje položaj.', hereDenied: 'Položaj nije dopušten. Dopusti lokaciju za ovu stranicu u postavkama preglednika.',
       hereErr: 'Položaj nije dostupan ({why}).', hereLifts: 'Najbliže donje stanice:', hereOnLift: 'Na žičari:',
-      hNet: 'Za početnike: mreža skijališta', netNote: 'Koliko se skijališta može obići samo plavim (ili plavim i crvenim) stazama. Krug je skup žičara između kojih se može kružiti tom razinom; računa se iz karte skijališta (smjer staza po visini terena, spojevi do 50 m).',
-      netCompare: 'Usporedi sva skijališta', netLevelAria: 'Razina', netEasy: 'Plave', netMid: 'Plave i crvene', netComputing: 'Računam mrežu…',
-      netCols: 'Skijalište|plavi krug km|žičara|plave+crvene km', netNoWay: 'S vrha ovih žičara nema silaska tom razinom: {list}.', netPistes: 'Staze kruga: {list}.',
       seaH: 'Poster sezone', seaAria: 'Sezona', seaMake: 'Napravi', seaOpt: '{label} · {n} {days}',
     },
     en: {
@@ -540,9 +520,6 @@
       hereStart: 'Show where I am', hereStop: 'Stop', hereViewAria: 'View', hereNear: 'Around me', hereAll: 'Whole resort',
       hereWait: 'Waiting for GPS…', hereNoGeo: 'This browser does not provide a position.', hereDenied: 'Location is not allowed. Allow location for this page in the browser settings.',
       hereErr: 'The position is not available ({why}).', hereLifts: 'Nearest lift bottom stations:', hereOnLift: 'On a lift:',
-      hNet: 'For beginners: resort network', netNote: 'How much of a resort you can ski with only blue (or blue and red) pistes. A loop is a set of lifts you can circle between at that level; computed from the resort map (piste direction from terrain height, links up to 50 m).',
-      netCompare: 'Compare all resorts', netLevelAria: 'Level', netEasy: 'Blue', netMid: 'Blue and red', netComputing: 'Computing the network…',
-      netCols: 'Resort|blue loop km|lifts|blue+red km', netNoWay: 'No way down at this level from the top of: {list}.', netPistes: 'Pistes of the loop: {list}.',
       seaH: 'Season poster', seaAria: 'Season', seaMake: 'Make', seaOpt: '{label} · {n} {days}',
     },
   };
@@ -783,8 +760,6 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
       if (cmd === 'dayPhoto') return JSON.parse(call('import json\njson.dumps(M.day_photo_add(_n, bytes(_b.to_py()), bytes(_th.to_py()) if _th is not None else None))', { _n: extra.name, _b: extra.bytes, _th: extra.thumb || null }));
       if (cmd === 'dayPhotoClear') return call('M.day_photo_clear()');
       if (cmd === 'here') return JSON.parse(call('import json\ntr = [tuple(q) for q in _tr]\njson.dumps(M.here(_la, _lo, _acc, _alt, tr, _now, _v))', { _la: extra.lat, _lo: extra.lon, _acc: extra.acc, _alt: extra.alt, _tr: extra.trail, _now: extra.now, _v: extra.view }));
-      if (cmd === 'netCompare') return JSON.parse(call('import json\njson.dumps(M.network_compare())'));
-      if (cmd === 'netView') return JSON.parse(call('import json\njson.dumps(M.network_view(_s, _l))', { _s: extra.slug, _l: extra.level }));
       if (cmd === 'seasonList') return JSON.parse(call('import json\njson.dumps(M.season_list(_r))', { _r: extra.records }));
       if (cmd === 'seasonPoster') return pair('M.season_poster(_r, _k)', { _r: extra.records, _k: extra.key });
       const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? call('M.day_page()') : call('M.pdf(True)');
@@ -1702,49 +1677,6 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     if (document.visibilityState === 'visible' && hereWatch !== null && 'wakeLock' in navigator) { try { hereLock = await navigator.wakeLock.request('screen'); } catch (_) {} }
   });
 
-  // ---------------------------------------------------------------- 3.7: početnička mreža
-  let netRows = null;
-  function netTableDraw() {
-    const box = $('netTable'); box.innerHTML = '';
-    if (!netRows) return;
-    const tb = document.createElement('table'); tb.className = 'nt';
-    const hr = document.createElement('tr'); t('netCols').split('|').forEach((h) => { const th = document.createElement('th'); th.textContent = h; hr.append(th); }); tb.append(hr);
-    netRows.forEach((r) => {
-      const tr = document.createElement('tr'); if (r.slug === $('netResort').value) tr.className = 'on';
-      [r.resort, num1(r.easy.loop_km), String(r.easy.loop_lifts), num1(r.intermediate.loop_km)].forEach((v) => { const td = document.createElement('td'); td.textContent = v; tr.append(td); });
-      tr.style.cursor = 'pointer'; tr.addEventListener('click', () => { $('netResort').value = r.slug; netDraw(); });
-      tb.append(tr);
-    });
-    box.append(tb);
-  }
-  async function netFill() {
-    if ($('netResort').options.length || !ready) return;
-    const rows = await ask('netCompare'); netRows = rows;
-    rows.slice().sort((a, b) => a.resort.localeCompare(b.resort)).forEach((r) => { const o = document.createElement('option'); o.value = r.slug; o.textContent = r.resort; $('netResort').append(o); });
-  }
-  async function netDraw() {
-    if (!ready) return;
-    busy = true; updateButtons(); $('netMsg').className = 'msg'; $('netMsg').textContent = t('netComputing');
-    try {
-      await netFill();
-      const r = await ask('netView', { slug: $('netResort').value, level: $('netLevel').value });
-      $('netImg').src = 'data:image/png;base64,' + r.png; $('netPrev').classList.remove('hidden');
-      $('netMsg').textContent = r.text;
-      $('netNoWay').textContent = r.no_way_down.length ? t('netNoWay', { list: r.no_way_down.join(', ') }) : '';
-      $('netPistes').textContent = r.best && r.best.pistes.length ? t('netPistes', { list: r.best.pistes.join(', ') }) : '';
-      if ($('netTable').childNodes.length) netTableDraw();
-    } catch (err) { $('netMsg').className = 'msg err'; $('netMsg').textContent = err.message; }
-    finally { busy = false; updateButtons(); }
-  }
-  $('netCompare').addEventListener('click', async () => {
-    busy = true; updateButtons(); $('netMsg').className = 'msg'; $('netMsg').textContent = t('netComputing');
-    try { await netFill(); netTableDraw(); $('netMsg').textContent = ''; }
-    catch (err) { $('netMsg').className = 'msg err'; $('netMsg').textContent = err.message; }
-    finally { busy = false; updateButtons(); }
-  });
-  $('netResort').addEventListener('change', netDraw);
-  $('netLevel').addEventListener('change', netDraw);
-
   // ---------------------------------------------------------------- 3.7: poster sezone
   let seaOut = null;
   async function seaFill() {
@@ -1794,7 +1726,6 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
   updateButtons = function () {
     v37Update();
     $('dpFiles').disabled = busy || !analyzed; $('dpClear').disabled = busy || !analyzed;
-    $('netCompare').disabled = busy || !ready; $('netResort').disabled = busy || !ready; $('netLevel').disabled = busy || !ready;
     $('seaMake').disabled = busy || !ready || !$('seaKey').value;
     $('hereStart').disabled = !ready;
   };
