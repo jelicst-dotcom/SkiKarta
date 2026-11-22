@@ -52,6 +52,9 @@
   @media (min-width:600px) { .styles { grid-template-columns:repeat(3, 1fr); } }
   .style { border:3px solid transparent; border-radius:12px; padding:0; background:var(--snow); text-align:left; overflow:hidden; cursor:pointer; }
   .style.on { border-color:var(--amber); box-shadow:0 6px 16px rgba(255,176,32,.35); }
+  /* 3.8.3: odabrani stil preko cijelog reda, oko pola ekrana */
+  .style.on { grid-column:1 / -1; }
+  .style.on .img, .styles.photo .style.on .img { aspect-ratio:auto; height:min(48vh, 560px); }
   .styles.photo .style .img { aspect-ratio:4/5; }
   .styles .allStyles { grid-column:1 / -1; }
   .style .img { aspect-ratio:16/9; background:#e6ebf0 center/contain no-repeat; display:grid; place-items:center; font-size:12px; color:var(--muted); position:relative; }
@@ -938,7 +941,7 @@ json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Za
       }
       if (cmd === 'dayCache') return await exec('M.day_cache()', {}, 'text');
       if (cmd === 'cacheSalt') return await exec('M.cache_key_salt()', {}, 'text');
-      if (cmd === 'icon') return (await J('import json\njson.dumps(M.icon(_n))', { _n: extra.n }));
+      if (cmd === 'icon') return (await J('import json\njson.dumps(M.icon(_n, _w))', { _n: extra.n, _w: extra.w || 420 }));
       if (cmd === 'photoSet') return (await J('import json\njson.dumps(M.photo_set(bytes(_ph.to_py())))', { _ph: new Uint8Array(extra.buffer) }));
       if (cmd === 'photoState') return (await J('import json\njson.dumps(M.photo_state())'));
       if (cmd === 'photoClear') { await X('M.photo_clear()'); return {}; }
@@ -1214,6 +1217,8 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
         chosen = s.n; try { localStorage.setItem('skikarta.style', String(chosen)); } catch (_) {}
         box.querySelectorAll('.style').forEach((x) => x.classList.toggle('on', x === b));
         poster = null; $('preview').classList.add('hidden'); $('savePoster').classList.add('hidden');
+        b.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        sharpIcon(b, s.n);
       });
       box.append(b);
     });
@@ -1222,6 +1227,19 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
     showExamples(box);
     iconQueue = shownLeft(box);
     drawIcons();
+    const sel = box.querySelector('.style.on'); if (sel) sharpIcon(sel, chosen);
+  }
+  // 3.8.3: uvećani odabrani stil dobiva oštriju sličicu tvog dana (poster je već nacrtan, pa je to brzo)
+  async function sharpIcon(b, n) {
+    if (b.dataset.sharp || !analyzed) return;
+    try {
+      const r = await ask('icon', { n, w: 1100 });
+      if (r.jpeg) {
+        const img = b.querySelector('.img');
+        img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = '';
+        img.dataset.real = '1'; img.classList.remove('ex'); b.dataset.sharp = '1';
+      }
+    } catch (_) {}
   }
   // 3.8.2: primjeri sličica (sintetički dan) vide se odmah; sličica tvog dana zamijeni primjer čim je nacrtana
   const exampleSets = {};
@@ -1257,7 +1275,8 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
         const r = await ask('icon', { n });
         if (!el) continue;
         const img = el.querySelector('.img');
-        if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; img.dataset.real = '1'; img.classList.remove('ex'); }
+        if (el.dataset.sharp) { /* već ima oštriju sličicu (odabrani stil) */ }
+        else if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; img.dataset.real = '1'; img.classList.remove('ex'); }
         else { img.style.backgroundImage = ''; img.classList.remove('ex'); img.textContent = t('noIcon'); el.disabled = true; el.style.opacity = .5; }
       } catch (_) { if (el) el.querySelector('.img').textContent = t('iconErr'); }
     }
@@ -1316,7 +1335,7 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
       b.addEventListener('click', () => {
         if (b.disabled) return;
         photoChosen = s.n; try { localStorage.setItem('skikarta.photoStyle', String(photoChosen)); } catch (_) {}
-        box.querySelectorAll('.style').forEach((x) => x.classList.toggle('on', x === b));
+        box.querySelectorAll('.style').forEach((x) => x.classList.toggle('on', x === b)); b.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         photoOut = null; $('photoPreview').classList.add('hidden'); $('photoSave').classList.add('hidden');
       });
       box.append(b);
