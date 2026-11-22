@@ -105,6 +105,8 @@
   .two select { margin:0; }
   .heremap svg { width:100%; height:auto; display:block; border-radius:14px; margin-top:10px; background:var(--snow); }
   .herel { margin:8px 0 0; font-size:15px; }
+  .mymap { margin:10px 0 0; } .mymap summary { cursor:pointer; font-weight:600; }
+  .mymap svg { width:100%; height:auto; display:block; border-radius:14px; margin-top:10px; background:var(--snow); }
   .herel b { font-weight:700; }
   .plist { font-size:13px; color:var(--muted); margin:6px 0 0; }
   .wxline { margin:8px 0 0; font-size:14px; }
@@ -259,8 +261,16 @@
     <h2><span class="step">+</span><span data-i="hHere">Ja na karti</span></h2>
     <p class="muted" data-i="hereNote" style="margin:0 0 10px">Tvoj položaj na karti skijališta, uz koju si stazu i koliko su daleko donje stanice žičara. Radi bez interneta dok su stranica i ekran upaljeni; položaj nikamo ne odlazi.</p>
     <div class="pair" style="grid-template-columns:1fr 1fr"><button class="primary" id="hereStart" data-i="hereStart">Pokaži gdje sam</button>
-      <select id="hereView" data-aria="hereViewAria" aria-label="Prikaz"><option value="friends" data-i="hereNear">Oko mene</option><option value="resort" data-i="hereAll">Cijelo skijalište</option></select></div>
+      <select id="hereView" data-aria="hereViewAria" aria-label="Prikaz"><option value="friends" data-i="hereNear">Oko mene</option><option value="resort" data-i="hereAll">Cijelo skijalište</option><option value="mine" data-i="mmNear" hidden>Moja karta: oko mene</option><option value="mineAll" data-i="mmAll" hidden>Moja karta: cijelo skijalište</option></select></div>
     <div class="msg" id="hereMsg"></div>
+    <label class="muted" for="hereCoords" data-i="hcLabel" style="display:block;margin:10px 0 4px">Za probu: upiši koordinate (stupnjevi, minute, sekunde ili decimalno)</label>
+    <div class="pair" style="grid-template-columns:1fr auto"><input id="hereCoords" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="46°43'29.34&quot;N 11°57'55.62&quot;E" style="min-width:0;padding:10px;border-radius:10px;border:1px solid var(--line,#c9d3df);font:inherit"><button class="ghost" id="hereGo" data-i="hcGo">Pokaži točku</button></div>
+    <details id="myMapBox" class="mymap"><summary data-i="mmTitle">Moja karta skijališta (privatno)</summary>
+      <p class="muted" data-i="mmNote" style="margin:6px 0 8px">Učitaj svoju datoteku karte (.skmap.json) da se položaj prikaže na tvojoj slici skijališta. Slika ostaje samo u ovom pregledniku i nikamo se ne šalje.</p>
+      <label class="file"><span data-i="mmPick">Učitaj kartu skijališta…</span><input id="mmFile" type="file" accept=".json,application/json"></label>
+      <div class="msg" id="mmMsg"></div>
+      <div class="pair" style="grid-template-columns:1fr; margin-top:6px"><button class="ghost" id="mmClear" data-i="mmClear" hidden>Ukloni kartu</button></div>
+    </details>
     <div class="herel" id="hereWhere"></div>
     <div class="heremap" id="hereMap"></div>
     <h3 class="sub" data-i="mkTitle">Označi trenutak</h3>
@@ -485,7 +495,7 @@
       dpPick: 'Odaberi fotke…', dpClear: 'Ukloni fotke s karte', dpBusy: 'Fotka {i}/{n}…', dpDone: 'Na karti: {ok}.', dpSkip: ' Nije stavljeno: {list}.',
       dpNoThumb: ' Za HEIC ovaj preglednik ne zna napraviti sličicu: točka je na karti, a sliku prikaže Safari.', dpCleared: 'Fotke su uklonjene s karte.',
       hHere: 'Ja na karti', hereNote: 'Tvoj položaj na karti skijališta, uz koju si stazu i koliko su daleko donje stanice žičara. Radi bez interneta dok su stranica i ekran upaljeni; položaj nikamo ne odlazi.',
-      hereStart: 'Pokaži gdje sam', hereStop: 'Zaustavi', hereViewAria: 'Prikaz', hereNear: 'Oko mene', hereAll: 'Cijelo skijalište',
+      hereStart: 'Pokaži gdje sam', hereStop: 'Zaustavi', hcLabel: 'Za probu: upiši koordinate (stupnjevi, minute, sekunde ili decimalno)', hcGo: 'Pokaži točku', hcStop: 'Prikazana je upisana točka; GPS je zaustavljen.', mmTitle: 'Moja karta skijališta (privatno)', mmNote: 'Učitaj svoju datoteku karte (.skmap.json) da se položaj prikaže na tvojoj slici skijališta. Slika ostaje samo u ovom pregledniku i nikamo se ne šalje.', mmPick: 'Učitaj kartu skijališta…', mmClear: 'Ukloni kartu', mmNear: 'Moja karta: oko mene', mmAll: 'Moja karta: cijelo skijalište', mmLoaded: 'Karta učitana: {name}. U izborniku iznad odaberi „Moja karta“.', mmBad: 'Datoteka nije ispravna: {why}', mmCleared: 'Karta uklonjena iz ovog preglednika.', mmOut: 'Izvan područja tvoje karte.', mmLine: 'Na karti: {text}', mmGrid: 'Na karti (procjena): {text}', mmNoImg: 'Datoteka nema sliku.', hereViewAria: 'Prikaz', hereNear: 'Oko mene', hereAll: 'Cijelo skijalište',
       hutLoading: 'Dohvaćam kolibe uz staze iz OpenStreetMapa…', hutNone: 'Kolibe uz staze nisu dohvaćene ({why}).', hutCount: 'Kolibe uz staze (OpenStreetMap): {n}, na karti dana.',
       hutLunch: 'Ručak', hutMin: 'min',
       stylesAll: 'Svi stilovi ({n})', stylesFew: 'Samo istaknuti stilovi', terrainGet: 'Preuzmi teren za Izohipse (stil 42)',
@@ -595,7 +605,7 @@
       dpPick: 'Choose photos…', dpClear: 'Remove photos from the map', dpBusy: 'Photo {i}/{n}…', dpDone: 'On the map: {ok}.', dpSkip: ' Not placed: {list}.',
       dpNoThumb: ' This browser cannot make a thumbnail of HEIC: the point is on the map and Safari shows the picture.', dpCleared: 'The photos are removed from the map.',
       hHere: 'Me on the map', hereNote: 'Your position on the resort map, which piste you are next to and how far the lift bottom stations are. Works offline while the page and the screen are on; the position goes nowhere.',
-      hereStart: 'Show where I am', hereStop: 'Stop', hereViewAria: 'View', hereNear: 'Around me', hereAll: 'Whole resort',
+      hereStart: 'Show where I am', hereStop: 'Stop', hcLabel: 'For testing: enter coordinates (degrees, minutes, seconds or decimal)', hcGo: 'Show point', hcStop: 'Showing the entered point; GPS is stopped.', mmTitle: 'My resort map (private)', mmNote: 'Load your map file (.skmap.json) to see your position on your own resort image. The image stays in this browser only and is never uploaded.', mmPick: 'Load resort map…', mmClear: 'Remove map', mmNear: 'My map: around me', mmAll: 'My map: whole resort', mmLoaded: 'Map loaded: {name}. Choose “My map” in the menu above.', mmBad: 'The file is not valid: {why}', mmCleared: 'Map removed from this browser.', mmOut: 'Outside the area of your map.', mmLine: 'On the map: {text}', mmGrid: 'On the map (estimate): {text}', mmNoImg: 'The file has no image.', hereViewAria: 'View', hereNear: 'Around me', hereAll: 'Whole resort',
       hutLoading: 'Fetching huts along the pistes from OpenStreetMap…', hutNone: 'Huts along the pistes were not fetched ({why}).', hutCount: 'Huts along the pistes (OpenStreetMap): {n}, on the day map.',
       hutLunch: 'Lunch', hutMin: 'min',
       stylesAll: 'All styles ({n})', stylesFew: 'Featured styles only', terrainGet: 'Download terrain for Contours (style 42)',
@@ -915,7 +925,7 @@ skikarta_maps.packs_changed()`);
   // 3.8.2: naredbe koje ne crtaju ne čekaju fontove; sve ostale prvo učitaju paket fontova (jednom)
   const NO_FONTS = new Set(['analyze', 'analyzeCached', 'dayCache', 'cacheSalt', 'weatherRequest', 'weatherSet', 'hutsRequest',
     'hutsSet', 'hutsState', 'marksSet', 'dayCheck', 'dayCorrect', 'shareInfo', 'lang', 'zipBegin', 'terrainPlan', 'terrainSet',
-    'here', 'passportClean', 'passportFiles', 'passportRecord', 'photoClear', 'photoState', 'dayPhoto', 'dayPhotoClear',
+    'here', 'panParse', 'panLoad', 'panClear', 'panPlace', 'passportClean', 'passportFiles', 'passportRecord', 'photoClear', 'photoState', 'dayPhoto', 'dayPhotoClear',
     'radarConfig', 'reliefPlan', 'seasonList', 'groupAnalyze', 'tripAnalyze']);
   let fontsReady = null;
   function needFonts() {
@@ -1020,6 +1030,11 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
       if (cmd === 'dayPhoto') return (await J('import json\njson.dumps(M.day_photo_add(_n, bytes(_b.to_py()), bytes(_th.to_py()) if _th is not None else None))', { _n: extra.name, _b: extra.bytes, _th: extra.thumb || null }));
       if (cmd === 'dayPhotoClear') return await X('M.day_photo_clear()');
       if (cmd === 'here') return (await J('import json\ntr = [tuple(q) for q in _tr]\njson.dumps(M.here(_la, _lo, _acc, _alt, tr, _now, _v))', { _la: extra.lat, _lo: extra.lon, _acc: extra.acc, _alt: extra.alt, _tr: extra.trail, _now: extra.now, _v: extra.view }));
+      // 3.9: moja karta skijališta (privatna slika)
+      if (cmd === 'panLoad') return (await J('import json\njson.dumps(M.pan_load(_t))', { _t: extra.text }));
+      if (cmd === 'panParse') return (await J('import json\njson.dumps(M.pan_parse(_t))', { _t: extra.text }));
+      if (cmd === 'panClear') return await X('M.pan_clear()');
+      if (cmd === 'panPlace') return (await J('import json\ntr = [tuple(q) for q in _tr]\njson.dumps(M.pan_place(_la, _lo, tr, _acc))', { _la: extra.lat, _lo: extra.lon, _acc: extra.acc, _tr: extra.trail }));
       // 3.8: kolibe (OpenStreetMap) i oznake trenutka
       if (cmd === 'hutsRequest') return (await J('import json\njson.dumps(M.huts_request())'));
       if (cmd === 'hutsSet') return (await J('import json\njson.dumps(M.huts_set(_s, _t))', { _s: extra.slug, _t: extra.text }));
@@ -2290,10 +2305,18 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
     hereBusy = true;
     try {
       const f = hereFix;
-      const r = await ask('here', { lat: f.lat, lon: f.lon, acc: f.acc, alt: f.alt, trail: hereTrail, now: f.t, view: $('hereView').value });
+      const sel = $('hereView').value, mine = (sel === 'mine' || sel === 'mineAll') && myMap;
+      const r = await ask('here', { lat: f.lat, lon: f.lon, acc: f.acc, alt: f.alt, trail: hereTrail, now: f.t, view: mine ? 'friends' : sel });
       $('hereMap').innerHTML = r.svg;
+      let mineText = '';
+      if (mine) {
+        const p = await ask('panPlace', { lat: f.lat, lon: f.lon, acc: f.acc, trail: hereTrail });
+        if (p.ok) { $('hereMap').innerHTML = myMapSvg(p, sel === 'mine'); mineText = t(p.how === 'line' ? 'mmLine' : 'mmGrid', { text: p.text }); }
+        else mineText = t('mmOut');
+      }
       const box = $('hereWhere'); box.textContent = '';
       const add = (text, bold) => { const d = document.createElement('div'); if (bold) { const b = document.createElement('b'); b.textContent = text; d.append(b); } else d.textContent = text; box.append(d); };
+      if (mineText) add(mineText, true);
       if (r.resort) add(r.resort, true);
       if (r.lift) add(t('hereOnLift') + ' ' + r.lift); else if (r.where) add(r.where);
       if (r.lifts.length) { add(t('hereLifts')); r.lifts.forEach((x) => add('· ' + x.text)); }
@@ -2324,9 +2347,103 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
   });
   $('hereView').addEventListener('change', () => hereDraw());
+  // 3.9.0: ručni upis koordinata (za probu bez GPS-a): isti put kao pravi položaj
+  async function hereManual() {
+    const msg = $('hereMsg'); msg.className = 'msg';
+    if (!ready) { msg.textContent = t('hereWait'); return; }
+    let r;
+    try { r = await ask('panParse', { text: $('hereCoords').value }); } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; return; }
+    if (!r.ok) { msg.className = 'msg err'; msg.textContent = r.why; return; }
+    hereStop(); hereTrail = [];
+    const now = Math.round(Date.now() / 1000);
+    hereFix = { lat: r.lat, lon: r.lon, acc: null, alt: null, t: now };
+    if (myMap && $('hereView').value !== 'mine' && $('hereView').value !== 'mineAll') $('hereView').value = 'mine';
+    await hereDraw();
+    if ($('hereMsg').className === 'msg muted' || !$('hereMsg').textContent) $('hereMsg').textContent = t('hcStop');
+  }
+  $('hereGo').addEventListener('click', hereManual);
+  $('hereCoords').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); hereManual(); } });
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible' && hereWatch !== null && 'wakeLock' in navigator) { try { hereLock = await navigator.wakeLock.request('screen'); } catch (_) {} }
   });
+
+  // ---------------------------------------------------------------- 3.9: moja karta skijališta (privatno, samo u ovom pregledniku)
+  let myMap = null;   // { name, w, h, region, url (blob slike) }
+  function mmDb() {
+    return new Promise((ok, no) => {
+      if (!window.indexedDB) { no(new Error('idb')); return; }
+      const r = indexedDB.open('skikarta_karta', 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('karta')) r.result.createObjectStore('karta', { keyPath: 'key' }); };
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+    });
+  }
+  async function mmSave(text) {
+    try { const db = await mmDb(); await new Promise((ok) => { const tx = db.transaction('karta', 'readwrite'); tx.objectStore('karta').put({ key: 'moja', text }); tx.oncomplete = ok; tx.onerror = ok; tx.onabort = ok; }); return true; } catch (_) { return false; }
+  }
+  async function mmLoadSaved() {
+    try { const db = await mmDb(); return await new Promise((ok) => { const q = db.transaction('karta').objectStore('karta').get('moja'); q.onsuccess = () => ok(q.result ? q.result.text : null); q.onerror = () => ok(null); }); } catch (_) { return null; }
+  }
+  async function mmDelete() { try { const db = await mmDb(); db.transaction('karta', 'readwrite').objectStore('karta').delete('moja'); } catch (_) {} }
+  function mmSetUi() {
+    const on = !!myMap;
+    ['mine', 'mineAll'].forEach((v) => { const o = $('hereView').querySelector('option[value="' + v + '"]'); if (o) o.hidden = !on; });
+    $('mmClear').hidden = !on;
+    if (!on && ($('hereView').value === 'mine' || $('hereView').value === 'mineAll')) $('hereView').value = 'friends';
+  }
+  async function mmApply(text) {
+    // slika ostaje u pregledniku (blob); Python dobiva samo geometriju
+    const o = JSON.parse(text);
+    if (o.format !== 'skikarta-karta') throw new Error(t('mmBad', { why: 'format' }));
+    if (!o.image) throw new Error(t('mmNoImg'));
+    const comma = o.image.indexOf(',');
+    const mime = o.image.slice(5, o.image.indexOf(';'));
+    const bin = atob(o.image.slice(comma + 1)); const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u8], { type: mime }));
+    delete o.image;
+    let info;
+    try { info = await ask('panLoad', { text: JSON.stringify(o) }); } catch (err) { URL.revokeObjectURL(url); throw err; }
+    if (myMap) URL.revokeObjectURL(myMap.url);
+    myMap = { name: info.resort || '', w: info.w, h: info.h, region: info.region, url };
+    mmSetUi();
+    return info;
+  }
+  function myMapSvg(p, near) {
+    const m = myMap, R = m.region, rw = R[2] - R[0], rh = R[3] - R[1];
+    let vx = R[0], vy = R[1], vw = rw, vh = rh;
+    if (near) {
+      vw = rw * 0.34; vh = vw * rh / rw;
+      vx = Math.min(Math.max(p.x - vw / 2, 0), m.w - vw); vy = Math.min(Math.max(p.y - vh / 2, 0), m.h - vh);
+    }
+    const k = vw / 800, pt = (a) => a.map((q) => q[0].toFixed(2) + ',' + q[1].toFixed(2)).join(' ');
+    let g = '<image href="' + m.url + '" x="0" y="0" width="' + m.w + '" height="' + m.h + '"/>';
+    if (p.trail && p.trail.length > 1) g += '<polyline points="' + pt(p.trail) + '" fill="none" stroke="#fff" stroke-width="' + (7 * k) + '" stroke-linecap="round" stroke-linejoin="round"/><polyline points="' + pt(p.trail) + '" fill="none" stroke="#d00000" stroke-width="' + (3.5 * k) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    if (p.r && p.r > 3 * k && p.r < vw / 3) g += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + p.r + '" fill="rgba(220,0,0,.10)" stroke="#d00000" stroke-width="' + (1.5 * k) + '" stroke-dasharray="' + (6 * k) + ' ' + (4 * k) + '"/>';
+    g += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (12 * k) + '" fill="none" stroke="#fff" stroke-width="' + (5 * k) + '"/><circle cx="' + p.x + '" cy="' + p.y + '" r="' + (12 * k) + '" fill="none" stroke="#d00000" stroke-width="' + (3 * k) + '"/><circle cx="' + p.x + '" cy="' + p.y + '" r="' + (3.5 * k) + '" fill="#d00000"/>';
+    return '<svg viewBox="' + [vx, vy, vw, vh].map((n) => n.toFixed(2)).join(' ') + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + t('mmTitle') + '">' + g + '</svg>';
+  }
+  $('mmFile').addEventListener('change', async () => {
+    const f = $('mmFile').files[0]; if (!f) return;
+    const msg = $('mmMsg'); msg.className = 'msg'; msg.textContent = '…';
+    try {
+      const text = await f.text();
+      const info = await mmApply(text);
+      await mmSave(text);
+      msg.textContent = t('mmLoaded', { name: info.resort || f.name });
+    } catch (err) { msg.className = 'msg err'; msg.textContent = /^Datoteka|^The file/.test(err.message) ? err.message : t('mmBad', { why: err.message }); }
+    $('mmFile').value = '';
+  });
+  $('mmClear').addEventListener('click', async () => {
+    await ask('panClear'); if (myMap) URL.revokeObjectURL(myMap.url); myMap = null; await mmDelete(); mmSetUi();
+    $('mmMsg').className = 'msg'; $('mmMsg').textContent = t('mmCleared');
+  });
+  (async () => {   // spremljena karta se vraća nakon što je Python spreman
+    const text = await mmLoadSaved(); if (!text) return;
+    const wait = setInterval(async () => {
+      if (!ready) return; clearInterval(wait);
+      try { const info = await mmApply(text); $('mmMsg').textContent = t('mmLoaded', { name: info.resort || '' }); } catch (_) {}
+    }, 500);
+  })();
 
   // ---------------------------------------------------------------- 3.7: poster sezone
   let seaOut = null;
@@ -2396,7 +2513,7 @@ json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
     v37Update();
     $('dpFiles').disabled = busy || !analyzed; $('dpClear').disabled = busy || !analyzed;
     $('seaMake').disabled = busy || !ready || !$('seaKey').value;
-    $('hereStart').disabled = !ready;
+    $('hereStart').disabled = !ready; $('hereGo').disabled = !ready;
   };
   const v37Ready = setInterval(() => { if (ready) { clearInterval(v37Ready); updateButtons(); seaFill(); } }, 400);
 
