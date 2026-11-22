@@ -1,11 +1,12 @@
 /* SkiKarta: rad bez interneta (2.9). Datoteku sw.js stvara napravi_web.py; verzija se računa iz sadržaja.
    Stranica, paketi (karte, profili, kod, fontovi) spremaju se pri instalaciji; Python (Pyodide) i fontovi
    s mreže spremaju se pri prvom učitavanju (stranica ih sama upiše u predmemoriju kad je spremna). */
-const VERSION = "9b3e8ad5934f";
+const VERSION = "13aef254eb92";
 const APP = "skikarta-app-" + VERSION;
 const CDN = "skikarta-cdn-v1";   // Pyodide ne mijenja se s verzijom aplikacije
-const SHELL = ["index.html", "manifest.json", "ikona-192.png", "ikona-512.png"];
+const SHELL = ["index.html", "manifest.json", "ikona-192.png", "ikona-512.png", "pyradnik.js"];
 const CDN_HOSTS = ["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"];
+const EXTRA = ["primjeri_hr.json", "primjeri_en.json"];   // 3.8.2
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
@@ -16,6 +17,8 @@ self.addEventListener("install", (event) => {
     const packs = await listResponse.clone().json();
     await cache.put("paketi.json", listResponse);
     await cache.addAll([...SHELL, ...packs].map(fresh));
+    // 3.8.2: primjeri sličica nisu nužni za rad; ako ih nema, instalacija ne pada
+    await Promise.all(EXTRA.map((u) => cache.add(fresh(u)).catch(() => {})));
     await self.skipWaiting();
   })());
 });
@@ -36,8 +39,10 @@ async function networkFirst(request, cacheName, ms, fallbackKey) {
       fetch(request),
       new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
     ]);
-    if (response && response.ok) cache.put(request, response.clone());
-    return response;
+    if (response && response.ok) { cache.put(request, response.clone()); return response; }
+    // 3.8.1: privremena greška poslužitelja (npr. 503) ne smije zamijeniti zadnju cjelovitu verziju
+    const kept = (await cache.match(request, { ignoreSearch: true })) || (fallbackKey && (await cache.match(fallbackKey)));
+    return kept || response;
   } catch (err) {
     const hit = (await cache.match(request, { ignoreSearch: true })) || (fallbackKey && (await cache.match(fallbackKey)));
     if (hit) return hit;
@@ -55,19 +60,21 @@ async function cacheFirst(request, cacheName) {
 }
 
 // 3.7: „Podijeli → SkiKarta” (Web Share Target): GPX iz druge aplikacije stiže kao POST na ./podijeli.
-// Datoteke se spremaju u zasebnu predmemoriju, a stranica ih preuzme (?podijeljeno=n) i odmah briše.
+// Datoteke se spremaju u zasebnu predmemoriju; stranica preuzme samo svoju pošiljku (?podijeljeno=ID) i zatim je briše.
 const SHARED = "skikarta-podijeljeno";
 async function receiveShare(request) {
   const form = await request.formData();
   const cache = await caches.open(SHARED);
+  // 3.8.1: svaka pošiljka ima svoj ID; stranica preuzima samo nju i briše je tek nakon preuzimanja
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let n = 0;
   for (const file of form.getAll("gpx")) {
     if (!file || typeof file === "string") continue;
-    const key = new URL(`podijeljeno/${Date.now()}-${n}?ime=${encodeURIComponent(file.name || "zapis.gpx")}`, self.registration.scope);
+    const key = new URL(`podijeljeno/${id}/${n}?ime=${encodeURIComponent(file.name || "zapis.gpx")}`, self.registration.scope);
     await cache.put(key, new Response(file));
     n += 1;
   }
-  return Response.redirect(new URL(`index.html?podijeljeno=${n}`, self.registration.scope).href, 303);
+  return Response.redirect(new URL(`index.html?podijeljeno=${id}`, self.registration.scope).href, 303);
 }
 
 self.addEventListener("fetch", (event) => {

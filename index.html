@@ -53,7 +53,9 @@
   .style { border:3px solid transparent; border-radius:12px; padding:0; background:var(--snow); text-align:left; overflow:hidden; cursor:pointer; }
   .style.on { border-color:var(--amber); box-shadow:0 6px 16px rgba(255,176,32,.35); }
   .styles.photo .style .img { aspect-ratio:4/5; }
-  .style .img { aspect-ratio:16/9; background:#e6ebf0 center/contain no-repeat; display:grid; place-items:center; font-size:12px; color:var(--muted); }
+  .styles .allStyles { grid-column:1 / -1; }
+  .style .img { aspect-ratio:16/9; background:#e6ebf0 center/contain no-repeat; display:grid; place-items:center; font-size:12px; color:var(--muted); position:relative; }
+  .style .img.ex::after { content:attr(data-ex); position:absolute; right:5px; bottom:5px; font-size:10px; line-height:1.4; padding:0 6px; border-radius:8px; background:rgba(0,0,0,.55); color:#fff; }
   .style .lbl { padding:6px 8px 8px; font-size:13px; font-weight:600; display:flex; gap:6px; align-items:center; }
   .style .lbl i { font-style:normal; background:var(--ink); color:#fff; border-radius:999px; padding:1px 7px; font-size:11px; }
   .preview img { width:100%; border-radius:12px; display:block; box-shadow:0 8px 24px rgba(20,32,43,.18); }
@@ -103,6 +105,13 @@
   .herel b { font-weight:700; }
   .plist { font-size:13px; color:var(--muted); margin:6px 0 0; }
   .wxline { margin:8px 0 0; font-size:14px; }
+  .wxline a { color:inherit; }
+  .check { margin-top:12px; } .check summary { cursor:pointer; font-weight:600; }
+  .chk { border-top:1px solid rgba(127,127,127,.25); padding:10px 0; } .chk .opts { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .chk .opts button { margin:0; } .opts { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; } .opts button { margin:0; }
+  .shopt { display:block; margin:6px 0; font-size:14px; }
+  .marks { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:10px; }
+  .marks button { padding:10px 4px; font-size:14px; }
 </style>
 </head>
 <body>
@@ -136,22 +145,32 @@
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="longest" style="margin:10px 0 0"></p>
     <p class="wxline muted" id="wxLine"></p>
+    <div class="wxline muted" id="hutLine"></div>
     <details class="extras hidden" id="extrasBox"><summary data-i="extras">Dodatno o danu</summary><div id="extras"></div></details>
     <button class="ghost" id="showMap" type="button" data-i="showMap" style="margin-top:12px">Karta dana</button>
     <div class="daymap hidden" id="dayMap"><iframe id="dayFrame" title="Karta dana" data-alt="showMap"></iframe></div>
+    <details class="check" id="chkBox"><summary data-i="chkHead">Provjeri moj dan</summary>
+      <p class="muted" data-i="chkNote" style="margin:8px 0">Najviše tri mjesta koja najviše mijenjaju brojke dana. Ispravak mijenja samo vrstu ili ime dijela dana (ili izostavlja dolazak/odlazak); GPS, brzina i visina ostaju izmjereni. Ispravci se pamte na ovom uređaju.</p>
+      <div id="chkList"></div>
+      <div class="msg" id="chkMsg"></div>
+      <div class="chk opts" style="border:0"><button class="ghost hidden" id="chkUndo" type="button" data-i="chkUndo">Poništi zadnji ispravak</button><button class="ghost hidden" id="chkReset" type="button" data-i="chkReset">Vrati izvornu analizu</button></div>
+    </details>
     <p class="muted hidden" id="otherDays" style="margin:12px 0 8px"></p>
+    <details class="muted hidden" id="dayNotes" style="margin:8px 0"><summary id="dayNotesHead"></summary><div id="dayNotesList"></div></details>
     <button class="ghost hidden" id="asTrip" type="button" data-i="asTrip">Napravi putovanje od svih dana</button>
   </div>
 
   <div class="card hidden" id="styleCard">
     <h2><span class="step">2</span><span data-i="h2">Stil postera</span></h2>
-    <p class="muted" data-i="iconsNote" style="margin:0 0 10px">Sličice se crtaju iz tvog dana, jedna po jedna.</p>
+    <p class="muted" data-i="iconsNote" style="margin:0 0 10px">Odmah se vide primjeri; sličice tvog dana zamjenjuju ih jedna po jedna.</p>
     <div class="styles" id="styles"></div>
+    <button class="ghost" id="terrainGet" data-i="terrainGet" style="margin-top:10px">Preuzmi teren za Izohipse (stil 42)</button>
+    <div class="msg" id="terrainMsg"></div>
   </div>
 
   <div class="card hidden" id="photoCard">
     <h2><span class="step">+</span><span data-i="hPhoto">Poster s fotografijom (po želji)</span></h2>
-    <p class="muted" data-i="photoNote" style="margin:0 0 10px">Priloži jednu fotografiju s tog dana i izaberi jedan od 25 stilova. Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.</p>
+    <p class="muted" data-i="photoNote" style="margin:0 0 10px">Priloži jednu fotografiju s tog dana i izaberi stil (30 stilova, prvo 12 istaknutih). Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.</p>
     <label class="file"><span data-i="pickPhoto">Priloži fotografiju…</span><input id="photo" type="file" accept="image/jpeg,image/png,image/*"></label>
     <p class="muted hidden" id="photoInfo" style="margin:10px 0"></p>
     <div class="styles photo hidden" id="photoStyles"></div>
@@ -173,7 +192,7 @@
       <button class="dark hidden" id="savePoster" data-i="savePng">Spremi poster (PNG)</button>
       <button class="ghost" id="zipDay" data-i="zipDay">Svi posteri dana (ZIP)</button>
       <button class="ghost" id="savePdf" data-i="pdf">Puni izvještaj spust po spust (PDF)</button>
-      <button class="ghost" id="savePage" data-i="pageBtn">Stranica dana za dijeljenje (HTML)</button>
+      <button class="ghost" id="savePage" data-i="pageBtn">Cijela stranica dana (HTML)</button>
       <button class="ghost" id="saveVideo" data-i="videoBtn">Animirani dan 9:16 za Instagram (video)</button>
       <button class="ghost" id="addPassport" data-i="addPas">Dodaj ovaj dan u pasoš skijališta</button>
     </div>
@@ -183,6 +202,17 @@
       <label class="file"><span data-i="dpPick">Odaberi fotke…</span><input id="dpFiles" type="file" accept="image/*,.heic,.heif,.jpg,.jpeg,.png" multiple></label>
       <button class="ghost" id="dpClear" data-i="dpClear">Ukloni fotke s karte</button>
       <div class="msg" id="dpMsg"></div>
+    </details>
+    <details class="extras" id="shareBox"><summary data-i="shSum">Izdanje za dijeljenje</summary>
+      <p class="muted" data-i="shNote" style="margin:8px 0">Kopija stranice dana za druge. Tvoj dan ostaje cijeli (trag, točna vremena, puls, oznake); ovdje biraš što primatelj vidi. Brojke dana ostaju iste.</p>
+      <label class="shopt"><input type="checkbox" id="shCut" checked> <span data-i="shCut">Izreži parking i smještaj (300 m oko prve i zadnje točke)</span></label>
+      <label class="shopt"><input type="checkbox" id="shClock"> <span data-i="shClock">Sakrij satnicu (umjesto sata vrijeme od početka dana)</span></label>
+      <label class="shopt" id="shHeartRow"><input type="checkbox" id="shHeart" checked> <span data-i="shHeart">Bez pulsa</span></label>
+      <label class="shopt" id="shMarksRow"><input type="checkbox" id="shMarks"> <span data-i="shMarks">Uključi oznake i bilješke</span></label>
+      <div id="shPhotos"></div>
+      <div class="chk opts" style="border:0"><button class="ghost" id="shPreview" type="button" data-i="shPreview">Pregledaj što primatelj dobiva</button><button class="dark" id="shSave" type="button" data-i="shSave">Spremi za dijeljenje (HTML)</button></div>
+      <div class="daymap hidden" id="shMap"><iframe id="shFrame" title="Izdanje za dijeljenje" data-alt="shSum"></iframe></div>
+      <div class="msg" id="shMsg"></div>
     </details>
     <details class="extras" id="reliefBox"><summary data-i="relSum">3D reljef dana za ispis (STL)</summary>
       <p class="muted" data-i="relNote" style="margin:8px 0">Teren oko tvog traga s urezanim tragom dana, za 3D pisač. Teren se preuzima s Mapterhorna (treba internet, nekoliko MB), a model se računa na ovom uređaju.</p>
@@ -207,6 +237,7 @@
     <div class="hidden" id="tripBody">
       <div class="head" style="margin-top:14px"><h3 id="tripResort"></h3><div class="muted" id="tripPeriod"></div></div>
       <div class="tiles" id="tripTiles"></div>
+      <p class="muted hidden" id="tripNotes"></p>
       <h3 class="sub" data-i="subTrip">Poster putovanja</h3>
       <div class="styles" id="tripStyles"></div>
       <h3 class="sub" data-i="subPiste">Poster jedne staze</h3>
@@ -229,6 +260,11 @@
     <div class="msg" id="hereMsg"></div>
     <div class="herel" id="hereWhere"></div>
     <div class="heremap" id="hereMap"></div>
+    <h3 class="sub" data-i="mkTitle">Označi trenutak</h3>
+    <p class="muted" data-i="mkNote" style="margin:0">Jedan dodir sprema vrijeme i položaj; oznaka se poslije pojavi na karti dana. Pamti se samo u ovom pregledniku.</p>
+    <div class="marks"><button class="ghost" data-mark="pogled" data-i="mkView">Pogled</button><button class="ghost" data-mark="pad" data-i="mkFall">Pad</button><button class="ghost" data-mark="rucak" data-i="mkLunch">Ručak</button><button class="ghost" data-mark="ostalo" data-i="mkOther">Ostalo</button></div>
+    <div class="msg" id="mkMsg"></div>
+    <div class="pair" style="grid-template-columns:1fr 1fr; margin-top:8px"><button class="ghost" id="mkExport" data-i="mkExport">Izvezi oznake (za Mac)</button><button class="ghost" id="mkClear" data-i="mkClear">Obriši oznake</button></div>
   </div>
   <div class="card" id="pasCard">
     <h2><span class="step">+</span><span data-i="hPas">Pasoš skijališta</span></h2>
@@ -245,6 +281,10 @@
       <h3 class="sub" data-i="pasNext">Sljedeći put</h3>
       <ul class="steps muted" id="pasSuggest"></ul>
       <div class="row">
+        <select id="pasStyle" data-aria="pasStyleAria" aria-label="Izgled pasoša">
+          <option value="0" data-i="pasSt0">Pasoš</option><option value="1" data-i="pasSt1">Knjižica žigova</option>
+          <option value="2" data-i="pasSt2">Karta osvajanja</option><option value="3" data-i="pasSt3">Emajlirane značke</option>
+          <option value="4" data-i="pasSt4">Prišivci (sva skijališta)</option></select>
         <button class="primary" id="pasMake" data-i="pasMake">Napravi poster pasoša</button>
         <div class="preview hidden" id="pasPrev"><img id="pasImg" data-alt="altPas" alt="Pasoš skijališta"></div>
         <button class="dark hidden" id="pasSave" data-i="savePng">Spremi poster (PNG)</button>
@@ -253,6 +293,11 @@
       <div class="pair"><select id="seaKey" data-aria="seaAria" aria-label="Sezona"></select><button class="primary" id="seaMake" data-i="seaMake">Napravi</button></div>
       <div class="preview hidden" id="seaPrev"><img id="seaImg" data-alt="seaH" alt="Poster sezone"></div>
       <button class="dark hidden" id="seaSave" data-i="savePng">Spremi poster (PNG)</button>
+      <h3 class="sub" data-i="napH">Krivulja napretka</h3>
+      <p class="muted" data-i="napNote" style="margin:0 0 8px">Dan po dan: brzina na plavim i crvenim stazama, spustovi bez stajanja, stajanje unutar spustova i kilometri.</p>
+      <button class="primary" id="napMake" data-i="napMake">Nacrtaj krivulju napretka</button>
+      <div class="preview hidden" id="napPrev"><img id="napImg" data-alt="napH" alt="Krivulja napretka"></div>
+      <button class="dark hidden" id="napSave" data-i="savePng">Spremi poster (PNG)</button>
     </div>
     <details class="extras"><summary data-i="pasCopy">Kopija pasoša</summary>
       <p class="muted" data-i="pasCopyNote" style="margin:8px 0">Pasoš je samo u ovom pregledniku. Spremi kopiju da ga preneseš na drugi uređaj ili sačuvaš ako brišeš podatke preglednika.</p>
@@ -328,8 +373,14 @@
       <div class="muted" id="rStamp" style="margin-top:8px"></div>
     </div>
   </div>
+  <div class="card hidden" id="diagCard">
+    <h2><span class="step">⏱</span><span data-i="diagTitle">Dijagnostika</span></h2>
+    <p class="muted" data-i="diagNoteTxt" style="margin:0 0 8px">Koliko traje svaki korak na ovom uređaju. Snimku zaslona pošalji ako je nešto sporo.</p>
+    <pre id="diagText" style="white-space:pre-wrap;font-size:12px;margin:0"></pre>
+    <button class="ghost" id="diagCopy" data-i="diagCopy" style="margin-top:8px">Kopiraj</button>
+  </div>
 </main>
-<footer>© OpenStreetMap contributors (ODbL) · OpenSkiData / OpenSkiMap · Skimap.org · Who’s On First · © Mapterhorn</footer>
+<footer id="foot">© OpenStreetMap contributors (ODbL) · OpenSkiData / OpenSkiMap · Skimap.org · Who’s On First · © Mapterhorn</footer>
 
 <script>
 (() => {
@@ -338,11 +389,18 @@
   const UI = {
     hr: {
       title: 'SkiKarta – izvještaj i poster',
+      diagTitle: 'Dijagnostika', diagNoteTxt: 'Koliko traje svaki korak na ovom uređaju. Snimku zaslona pošalji ako je nešto sporo.', diagCopy: 'Kopiraj', diagCopied: 'Kopirano.',
+      diagPage: 'Python radi u stranici', diagWorker: 'Python radi u pozadinskoj niti', diagBoot: 'pokretanje ukupno', diagDevice: 'Uređaj',
       sub: 'Izvještaj i poster skijaškog dana iz GPX-a. Sve se računa na ovom uređaju.',
       offOk: 'Spremljeno za rad bez interneta: sljedeći put se otvara i bez veze (GPX-ovi se i dalje obrađuju samo na ovom uređaju).',
+      shSum: 'Izdanje za dijeljenje', shNote: 'Kopija stranice dana za druge. Tvoj dan ostaje cijeli (trag, točna vremena, puls, oznake); ovdje biraš što primatelj vidi. Brojke dana ostaju iste.', shCut: 'Izreži parking i smještaj (300 m oko prve i zadnje točke)', shClock: 'Sakrij satnicu (umjesto sata vrijeme od početka dana)', shHeart: 'Bez pulsa', shMarks: 'Uključi oznake i bilješke', shPreview: 'Pregledaj što primatelj dobiva', shSave: 'Spremi za dijeljenje (HTML)', shPhotosHead: 'Fotke u izdanju:', shBusy: 'Slažem izdanje za dijeljenje…', shShown: 'Ovo je točno stranica koju će primatelj dobiti.',
+      chkHead: 'Provjeri moj dan', chkNote: 'Najviše tri mjesta koja najviše mijenjaju brojke dana. Ispravak mijenja samo vrstu ili ime dijela dana (ili izostavlja dolazak/odlazak); GPS, brzina i visina ostaju izmjereni. Ispravci se pamte na ovom uređaju.', chkUndo: 'Poništi zadnji ispravak', chkReset: 'Vrati izvornu analizu',
+      example: 'primjer', fromCache: 'Dan je otvoren iz zapamćene analize (isti GPX na ovom uređaju).', reAnalyze: 'Analiziraj ponovno',
+      dayNotes: 'Napomene uz uvoz ({n})', chkNone: 'Nema dvojbenih mjesta koja bitno mijenjaju brojke dana.', chkBusy: 'Primjenjujem…', chkDone: 'Ispravljeno: {what}. {diff}', chkKept: 'U redu, ostaje kako je prepoznato.', chkUndone: 'Zadnji ispravak je poništen. {diff}', chkResetDone: 'Vraćena je izvorna analiza. {diff}', chkSaved: 'Primijenjeni su spremljeni ispravci ovog dana ({n}).', videoStop: '■ Prekini video', videoStopped: 'Izrada videa je prekinuta.',
+      offMissing: 'Još nije sve spremljeno za rad bez interneta (nedostaje {n} datoteka). Ostavi stranicu otvorenu uz vezu pa je ponovno otvori.',
       hint: 'Prvo otvaranje preuzima Python i karte (nekoliko desetaka MB) i može potrajati minutu. Poslije je brže.',
       h1: 'GPX zapis dana', pick: 'Odaberi GPX…', noFiles: 'Nijedna datoteka nije odabrana.', analyze: 'Analiziraj dan',
-      h2: 'Stil postera', iconsNote: 'Sličice se crtaju iz tvog dana, jedna po jedna.',
+      h2: 'Stil postera', iconsNote: 'Odmah se vide primjeri; sličice tvog dana zamjenjuju ih jedna po jedna.',
       h3: 'Poster i izvještaj', make: 'Napravi poster', altDay: 'Poster dana', savePng: 'Spremi poster (PNG)',
       zipDay: 'Svi posteri dana (ZIP)', pdf: 'Puni izvještaj spust po spust (PDF)',
       hTrip: 'Poster putovanja (više dana)',
@@ -360,7 +418,7 @@
       analyzing: 'Analiziram dan…', analyzingSlow: 'Analiziram dan… (stranica može nekoliko desetaka sekundi ne reagirati)',
       extras: 'Dodatno o danu', longest: 'Najdulji spust u {time}: {km} km',
       otherDays: 'Zapisi obuhvaćaju još dana: {list}. Prikazan je dan s najviše zapisa.', asTrip: 'Napravi putovanje od svih dana',
-      showMap: 'Karta dana', hideMap: 'Sakrij kartu', pageBtn: 'Stranica dana za dijeljenje (HTML)',
+      showMap: 'Karta dana', hideMap: 'Sakrij kartu', pageBtn: 'Cijela stranica dana (HTML)',
       videoBtn: 'Animirani dan 9:16 za Instagram (video)', videoDraw: 'Crtam sličice videa: {p} %', videoRec: 'Snimam video: {p} %', videoNo: 'Ovaj preglednik ne može snimiti video.', noIcon: 'Nije moguće za ovaj dan', iconErr: 'Greška', notPossible: 'Nije moguće',
       saved: 'Spremljeno: ', saveCancelled: 'Spremanje otkazano.', downloading: 'Preuzimanje: ',
       noSave: 'Ovaj preglednik ne dopušta spremanje datoteke.', drawing: 'Crtam poster…', writingPdf: 'Pišem PDF…',
@@ -369,7 +427,7 @@
       tripAnalyzing: 'Analiziram dane… (stranica može nekoliko minuta ne reagirati)',
       daysN: '{n} dana', pisteOpt: '{name} ({p}×, {d} dana)',
       tVert: 'visinskog spusta', tSki: 'na skijama', tRuns: 'spustova', tTop: 'km/h najveća brzina',
-      hPhoto: 'Poster s fotografijom (po želji)', photoNote: 'Priloži jednu fotografiju s tog dana i izaberi jedan od 25 stilova. Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.',
+      hPhoto: 'Poster s fotografijom (po želji)', photoNote: 'Priloži jednu fotografiju s tog dana i izaberi stil (30 stilova, prvo 12 istaknutih). Ako fotografija ima vrijeme snimanja, na posteru se označi gdje je snimljena.',
       pickPhoto: 'Priloži fotografiju…', makePhoto: 'Napravi poster s fotografijom', zipPhoto: 'Svi posteri s fotografijom (ZIP)',
       removePhoto: 'Makni fotografiju', altPhoto: 'Poster s fotografijom', readingPhoto: 'Čitam fotografiju…',
       hRadar: 'Radar prijatelja',
@@ -416,7 +474,7 @@
       pickGrp: 'Odaberi GPX zapise (jedan po osobi)…', grpAnalyze: 'Usporedi', grpNameOf: 'Ime za {file}', person: 'Osoba {n}',
       grpAnalyzing: 'Analiziram zapise svih osoba…', grpMake: 'Napravi poster grupnog dana', altGrp: 'Grupni dan',
       grpDuel: 'Dvoboj na stazi', grpAAria: 'Prva osoba', grpBAria: 'Druga osoba', grpDuelMake: 'Napravi poster dvoboja', altDuel: 'Dvoboj na stazi',
-      gRuns: 'spustovi', gKm: 'km', gVert: 'spust m', gMax: 'km/h', gTogether: '{a} i {b}: {t} na ≤ 50 m', gLifts: ' · istih vožnji žičarom: {n}',
+      gRuns: 'spustovi', gKm: 'km', gVert: 'spust m', gMax: 'km/h', gTogether: '{a} i {b}: {t} na ≤ 50 m', gCompared: ' (od {t} kad su oba zapisa imala položaj)', noAlt: 'visina nedostupna', gLifts: ' · istih vožnji žičarom: {n}',
       gAll: 'Svi zajedno: {t}', gNoDuel: 'Nijednu stazu nisu cijelu prošle barem dvije osobe, pa nema dvoboja.', gFastest: 'Najbrži po stazama',
       gNeed2: 'Odaberi zapise barem dvije osobe.', shared: 'Primljeno zapisa: {n}. Analiziram…',
       wxLoading: 'Dohvaćam vrijeme dana s Open-Meteo…', wxNo: 'Vrijeme dana nije dohvaćeno ({why}).', wxSrc: 'Vrijeme (model Open-Meteo): {text}',
@@ -425,17 +483,34 @@
       dpNoThumb: ' Za HEIC ovaj preglednik ne zna napraviti sličicu: točka je na karti, a sliku prikaže Safari.', dpCleared: 'Fotke su uklonjene s karte.',
       hHere: 'Ja na karti', hereNote: 'Tvoj položaj na karti skijališta, uz koju si stazu i koliko su daleko donje stanice žičara. Radi bez interneta dok su stranica i ekran upaljeni; položaj nikamo ne odlazi.',
       hereStart: 'Pokaži gdje sam', hereStop: 'Zaustavi', hereViewAria: 'Prikaz', hereNear: 'Oko mene', hereAll: 'Cijelo skijalište',
+      hutLoading: 'Dohvaćam kolibe uz staze iz OpenStreetMapa…', hutNone: 'Kolibe uz staze nisu dohvaćene ({why}).', hutCount: 'Kolibe uz staze (OpenStreetMap): {n}, na karti dana.',
+      hutLunch: 'Ručak', hutMin: 'min',
+      stylesAll: 'Svi stilovi ({n})', stylesFew: 'Samo istaknuti stilovi', terrainGet: 'Preuzmi teren za Izohipse (stil 42)',
+      terrainOk: 'Teren je preuzet; Izohipse se crtaju.',
+      mkTitle: 'Označi trenutak', mkNote: 'Jedan dodir sprema vrijeme i položaj; oznaka se poslije pojavi na karti dana. Pamti se samo u ovom pregledniku.',
+      mkView: 'Pogled', mkFall: 'Pad', mkLunch: 'Ručak', mkOther: 'Ostalo', mkExport: 'Izvezi oznake (za Mac)', mkClear: 'Obriši oznake',
+      mkWait: 'Čekam položaj…', mkSaved: 'Spremljeno: {kind} u {clock}. Oznaka ukupno: {n}.', mkCount: 'Oznaka u pregledniku: {n}.', mkNone: 'Nema oznaka.',
+      mkCleared: 'Oznake su obrisane.', mkNoGeo: 'Ovaj preglednik ne daje položaj.', mkAsk: 'Obrisati sve oznake iz ovog preglednika?',
       hereWait: 'Čekam GPS…', hereNoGeo: 'Ovaj preglednik ne daje položaj.', hereDenied: 'Položaj nije dopušten. Dopusti lokaciju za ovu stranicu u postavkama preglednika.',
       hereErr: 'Položaj nije dostupan ({why}).', hereLifts: 'Najbliže donje stanice:', hereOnLift: 'Na žičari:',
       seaH: 'Poster sezone', seaAria: 'Sezona', seaMake: 'Napravi', seaOpt: '{label} · {n} {days}',
+      pasStyleAria: 'Izgled pasoša', pasSt0: 'Pasoš', pasSt1: 'Knjižica žigova', pasSt2: 'Karta osvajanja', pasSt3: 'Emajlirane značke', pasSt4: 'Prišivci (sva skijališta)',
+      napH: 'Krivulja napretka', napNote: 'Dan po dan: brzina na plavim i crvenim stazama, spustovi bez stajanja, stajanje unutar spustova i kilometri.', napMake: 'Nacrtaj krivulju napretka',
     },
     en: {
       title: 'SkiKarta – report and poster',
+      diagTitle: 'Diagnostics', diagNoteTxt: 'How long each step takes on this device. Send a screenshot if something is slow.', diagCopy: 'Copy', diagCopied: 'Copied.',
+      diagPage: 'Python runs in the page', diagWorker: 'Python runs in a background thread', diagBoot: 'start-up in total', diagDevice: 'Device',
       sub: 'Report and poster of a ski day from GPX. Everything is calculated on this device.',
       offOk: 'Saved for offline use: next time it opens without a connection (GPX files are still processed only on this device).',
+      shSum: 'Edition to share', shNote: 'A copy of the day page for others. Your day stays whole (track, exact times, heart rate, marks); here you choose what the recipient sees. The day\'s numbers stay the same.', shCut: 'Cut out the car park and lodging (300 m around the first and last point)', shClock: 'Hide the clock times (time since the start instead)', shHeart: 'No heart rate', shMarks: 'Include marks and notes', shPreview: 'Preview what the recipient gets', shSave: 'Save to share (HTML)', shPhotosHead: 'Photos in the edition:', shBusy: 'Building the edition to share…', shShown: 'This is exactly the page the recipient will get.',
+      chkHead: 'Check my day', chkNote: 'At most three places that change the day\'s numbers the most. A correction only changes the kind or name of a part of the day (or leaves out the arrival/departure); GPS, speed and altitude stay as measured. Corrections are kept on this device.', chkUndo: 'Undo the last correction', chkReset: 'Back to the original analysis',
+      example: 'example', fromCache: 'The day was opened from a saved analysis (same GPX on this device).', reAnalyze: 'Analyse again',
+      dayNotes: 'Import notes ({n})', chkNone: 'No doubtful places that noticeably change the day\'s numbers.', chkBusy: 'Applying…', chkDone: 'Corrected: {what}. {diff}', chkKept: 'OK, it stays as recognised.', chkUndone: 'The last correction is undone. {diff}', chkResetDone: 'The original analysis is back. {diff}', chkSaved: 'Saved corrections for this day were applied ({n}).', videoStop: '■ Stop the video', videoStopped: 'Video making was stopped.',
+      offMissing: 'Not everything is saved for offline use yet ({n} files missing). Keep the page open with a connection, then open it again.',
       hint: 'The first visit downloads Python and the maps (a few tens of MB) and can take a minute. After that it is faster.',
       h1: 'GPX recording of the day', pick: 'Choose GPX…', noFiles: 'No file chosen.', analyze: 'Analyse the day',
-      h2: 'Poster style', iconsNote: 'Thumbnails are drawn from your day, one by one.',
+      h2: 'Poster style', iconsNote: 'Examples show at once; thumbnails of your day replace them one by one.',
       h3: 'Poster and report', make: 'Make poster', altDay: 'Poster of the day', savePng: 'Save poster (PNG)',
       zipDay: 'All posters of the day (ZIP)', pdf: 'Full run-by-run report (PDF)',
       hTrip: 'Trip poster (several days)',
@@ -453,7 +528,7 @@
       analyzing: 'Analysing the day…', analyzingSlow: 'Analysing the day… (the page may not respond for several tens of seconds)',
       extras: 'More about the day', longest: 'Longest run at {time}: {km} km',
       otherDays: 'The recordings also cover: {list}. The day with the most data is shown.', asTrip: 'Make a trip from all days',
-      showMap: 'Map of the day', hideMap: 'Hide map', pageBtn: 'Shareable day page (HTML)',
+      showMap: 'Map of the day', hideMap: 'Hide map', pageBtn: 'Full day page (HTML)',
       videoBtn: 'Animated day 9:16 for Instagram (video)', videoDraw: 'Drawing video frames: {p} %', videoRec: 'Recording the video: {p} %', videoNo: 'This browser cannot record video.', noIcon: 'Not possible for this day', iconErr: 'Error', notPossible: 'Not possible',
       saved: 'Saved: ', saveCancelled: 'Saving cancelled.', downloading: 'Downloading: ',
       noSave: 'This browser does not allow saving the file.', drawing: 'Drawing the poster…', writingPdf: 'Writing the PDF…',
@@ -462,7 +537,7 @@
       tripAnalyzing: 'Analysing the days… (the page may not respond for a few minutes)',
       daysN: '{n} days', pisteOpt: '{name} ({p}×, {d} days)',
       tVert: 'vertical descent', tSki: 'on skis', tRuns: 'runs', tTop: 'km/h top speed',
-      hPhoto: 'Poster with a photo (optional)', photoNote: 'Attach one photo from that day and pick one of 25 styles. If the photo has a capture time, the poster marks where it was taken.',
+      hPhoto: 'Poster with a photo (optional)', photoNote: 'Attach one photo from that day and pick a style (30 styles, 12 featured first). If the photo has a capture time, the poster marks where it was taken.',
       pickPhoto: 'Attach a photo…', makePhoto: 'Make the photo poster', zipPhoto: 'All photo posters (ZIP)',
       removePhoto: 'Remove the photo', altPhoto: 'Poster with a photo', readingPhoto: 'Reading the photo…',
       hRadar: 'Friend radar',
@@ -509,7 +584,7 @@
       pickGrp: 'Choose GPX recordings (one per person)…', grpAnalyze: 'Compare', grpNameOf: 'Name for {file}', person: 'Person {n}',
       grpAnalyzing: 'Analysing everyone’s recordings…', grpMake: 'Make the group day poster', altGrp: 'Group day',
       grpDuel: 'Piste duel', grpAAria: 'First person', grpBAria: 'Second person', grpDuelMake: 'Make the duel poster', altDuel: 'Piste duel',
-      gRuns: 'runs', gKm: 'km', gVert: 'vert m', gMax: 'km/h', gTogether: '{a} and {b}: {t} within 50 m', gLifts: ' · shared lift rides: {n}',
+      gRuns: 'runs', gKm: 'km', gVert: 'vert m', gMax: 'km/h', gTogether: '{a} and {b}: {t} within 50 m', gCompared: ' (of {t} when both recordings had a position)', noAlt: 'altitude unavailable', gLifts: ' · shared lift rides: {n}',
       gAll: 'All together: {t}', gNoDuel: 'No piste was skied in full by at least two people, so there is no duel.', gFastest: 'Fastest on the pistes',
       gNeed2: 'Choose recordings of at least two people.', shared: 'Recordings received: {n}. Analysing…',
       wxLoading: 'Fetching the weather of the day from Open-Meteo…', wxNo: 'The weather of the day was not fetched ({why}).', wxSrc: 'Weather (Open-Meteo model): {text}',
@@ -518,9 +593,19 @@
       dpNoThumb: ' This browser cannot make a thumbnail of HEIC: the point is on the map and Safari shows the picture.', dpCleared: 'The photos are removed from the map.',
       hHere: 'Me on the map', hereNote: 'Your position on the resort map, which piste you are next to and how far the lift bottom stations are. Works offline while the page and the screen are on; the position goes nowhere.',
       hereStart: 'Show where I am', hereStop: 'Stop', hereViewAria: 'View', hereNear: 'Around me', hereAll: 'Whole resort',
+      hutLoading: 'Fetching huts along the pistes from OpenStreetMap…', hutNone: 'Huts along the pistes were not fetched ({why}).', hutCount: 'Huts along the pistes (OpenStreetMap): {n}, on the day map.',
+      hutLunch: 'Lunch', hutMin: 'min',
+      stylesAll: 'All styles ({n})', stylesFew: 'Featured styles only', terrainGet: 'Download terrain for Contours (style 42)',
+      terrainOk: 'The terrain is downloaded; Contours are being drawn.',
+      mkTitle: 'Mark the moment', mkNote: 'One tap saves the time and position; the mark later shows on the day map. Kept only in this browser.',
+      mkView: 'View', mkFall: 'Fall', mkLunch: 'Lunch', mkOther: 'Other', mkExport: 'Export marks (for Mac)', mkClear: 'Delete marks',
+      mkWait: 'Waiting for the position…', mkSaved: 'Saved: {kind} at {clock}. Marks in total: {n}.', mkCount: 'Marks in this browser: {n}.', mkNone: 'No marks.',
+      mkCleared: 'The marks are deleted.', mkNoGeo: 'This browser gives no position.', mkAsk: 'Delete all marks from this browser?',
       hereWait: 'Waiting for GPS…', hereNoGeo: 'This browser does not provide a position.', hereDenied: 'Location is not allowed. Allow location for this page in the browser settings.',
       hereErr: 'The position is not available ({why}).', hereLifts: 'Nearest lift bottom stations:', hereOnLift: 'On a lift:',
       seaH: 'Season poster', seaAria: 'Season', seaMake: 'Make', seaOpt: '{label} · {n} {days}',
+      pasStyleAria: 'Passport look', pasSt0: 'Passport', pasSt1: 'Stamp booklet', pasSt2: 'Conquest map', pasSt3: 'Enamel badges', pasSt4: 'Patches (all resorts)',
+      napH: 'Progress curve', napNote: 'Day by day: speed on blue and red pistes, runs without a stop, stopping within runs and kilometres.', napMake: 'Draw the progress curve',
     },
   };
   let lang = 'hr';
@@ -556,6 +641,30 @@
   try { chosen = parseInt(localStorage.getItem('skikarta.style') || '0', 10) || 0; } catch (_) {}
   const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.29.4/full/';
   let py = null, stamp = Date.now(), bootFailed = false;
+
+  // 3.8: dijagnostika (…/index.html?dijagnostika ili 5 dodira podnožja): trajanje svakog koraka na ovom uređaju
+  const diagRows = [], diagNotes = {};
+  function diagRender() {
+    if ($('diagCard').classList.contains('hidden')) return;
+    const dev = [navigator.userAgent.replace(/\s*\([^)]*\)/, ' '), navigator.hardwareConcurrency ? navigator.hardwareConcurrency + ' CPU' : '',
+      navigator.deviceMemory ? navigator.deviceMemory + ' GB' : ''].filter(Boolean).join(' · ');
+    const lines = Object.entries(diagNotes).map(([k, v]) => k + ': ' + v);
+    lines.push(t('diagDevice') + ': ' + dev, '');
+    diagRows.slice(-60).forEach(([what, ms]) => lines.push((ms / 1000).toFixed(2).padStart(7) + ' s  ' + what));
+    $('diagText').textContent = lines.join('\n');
+  }
+  function diagAdd(what, ms) { diagRows.push([what, ms]); diagRender(); }
+  function diagNote(key, value) { diagNotes[key] = value; diagRender(); }
+  function diagShow() { $('diagCard').classList.remove('hidden'); diagRender(); }
+  if (/dijagnostika|diagnostics/.test(location.search + location.hash)) setTimeout(diagShow, 0);
+  let footTaps = 0, footTimer = null;
+  document.getElementById('foot').addEventListener('click', () => {
+    footTaps += 1; clearTimeout(footTimer); footTimer = setTimeout(() => { footTaps = 0; }, 1500);
+    if (footTaps >= 5) { footTaps = 0; diagShow(); }
+  });
+  document.getElementById('diagCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('diagText').textContent); $('diagCopy').textContent = t('diagCopied'); } catch (_) {}
+  });
 
   function setEngine(key, pct, vars, suffix) {
     engine = { key, vars: vars || null, suffix: suffix || '' }; renderEngine(); $('engineBar').style.width = (pct || 0) + '%';
@@ -601,7 +710,9 @@
       t('pyTimeout') + (lastFetch || '—'));
     step('loadPkgs', 35);
     await py.loadPackage(['numpy', 'pillow', 'tzdata'], { messageCallback: (m) => { $('engineHint').textContent = m; } });
-    const list = await (await fetch('paketi.json')).json();
+    const all = await (await fetch('paketi.json')).json(), list = bootPacks(all);
+    const tag = String(py.runPython('import sys\nsys.implementation.cache_tag')), pyc = 'paket_pyc_' + tag + '.json';
+    try { if (pycPacks(all).includes(pyc) && window.caches && await caches.match(pyc)) list.push(pyc); } catch (_) {}
     for (let i = 0; i < list.length; i++) {
       step('loadMaps', 60 + Math.round(35 * i / list.length), { i: i + 1, n: list.length });
       const res = await fetch(list[i]);
@@ -623,10 +734,66 @@ del _pack`);
 import sys, os
 sys.path[:0] = ['/home/pyodide/app/skikarta', '/home/pyodide/app/site']
 os.chdir('/home/pyodide/app/skikarta')
+os.environ['SKIKARTA_WEB'] = '1'
 import skikarta_mobile as M\nM.set_lang(_lang)`);
     step('ready', 100);
     ready = true; $('engineHint').classList.add('hidden'); updateButtons();
+    diagNote('engine', t('diagPage'));
     saveOffline();
+  }
+  // 3.8: osnovni paketi pri pokretanju; karte i profili skijališta te reportlab (PDF) tek kad zatrebaju
+  // 3.8.2: fontovi tek za prvi crtež; prevedeni kod (paket_pyc_<verzija>) samo uz istu verziju Pythona
+  const bootPacks = (list) => list.filter((n) => !/^paket_r_/.test(n) && !/^paket_pyc_/.test(n) && n !== 'paket_reportlab.json' && n !== 'paket_fonti.json');
+  const pycPacks = (list) => list.filter((n) => /^paket_pyc_/.test(n));
+  // 3.8: Python u pozadinskoj niti (Web Worker); ako ga preglednik ne podržava, radi u stranici kao prije
+  let worker = null, workerResources = [], nextId = 1;
+  const pending = new Map();
+  function bootWorker() {
+    return new Promise((resolve, reject) => {
+      try { worker = new Worker('pyradnik.js'); } catch (err) { reject(err); return; }
+      worker.onmessage = (e) => {
+        const m = e.data || {};
+        if (m.type === 'step') step(m.key, m.pct, m.vars);
+        else if (m.type === 'hint') $('engineHint').textContent = m.text;
+        else if (m.type === 'ready') { workerResources = m.resources || []; (m.marks || []).forEach(([w, ms]) => diagAdd('⏵ ' + w, ms)); resolve(); }
+        else if (m.type === 'bootError') reject(new Error(m.message));
+        else if (m.type === 'result') {
+          const job = pending.get(m.id);
+          if (!job) return;
+          pending.delete(m.id);
+          if (m.ok) job.resolve(m.value); else job.reject(new Error(m.message));
+        }
+      };
+      worker.onerror = (e) => reject(new Error((e && e.message) || 'worker'));
+      fetch('paketi.json').then((r) => r.json()).then((list) => {
+        worker.postMessage({ type: 'boot', pyodide: PYODIDE, lang, packs: bootPacks(list), pyc: pycPacks(list) });
+      }, reject);
+    });
+  }
+  function toWorker(message) {
+    return new Promise((resolve, reject) => {
+      const id = nextId++;
+      pending.set(id, { resolve, reject });
+      worker.postMessage({ ...message, id });
+    });
+  }
+  async function bootAny() {
+    const t0 = performance.now();
+    try {
+      await withTimeout(bootWorker(), 240000, t('pyTimeout') + (lastFetch || '—'));
+      step('ready', 100);
+      ready = true; $('engineHint').classList.add('hidden'); updateButtons();
+      diagNote('engine', t('diagWorker'));
+      diagAdd('⏵ ' + t('diagBoot'), performance.now() - t0);
+      saveOffline();
+    } catch (err) {
+      const text = String((err && err.message) || err);
+      if (worker) { try { worker.terminate(); } catch (_) {} worker = null; }
+      if (/@@CDN|@@NEMA/.test(text)) throw new Error(text.replace(/@@\w+:/, ''));
+      diagNote('workerError', text);
+      await boot();
+      diagAdd('⏵ ' + t('diagBoot'), performance.now() - t0);
+    }
   }
   // 2.9: rad bez interneta. Service worker sprema stranicu i pakete; Pyodide s CDN-a upisuje se u predmemoriju ovdje,
   // jer se na prvom otvaranju učitao prije nego što je worker preuzeo nadzor. Greške se ne prikazuju: bez ovoga sve radi kao prije.
@@ -643,18 +810,38 @@ import skikarta_mobile as M\nM.set_lang(_lang)`);
       await withTimeout(navigator.serviceWorker.ready, 15000, 'sw');
       const cdn = await caches.open('skikarta-cdn-v1');
       const hosts = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
-      const urls = [...new Set(performance.getEntriesByType('resource').map((e) => e.name)
+      const urls = [...new Set(performance.getEntriesByType('resource').map((e) => e.name).concat(workerResources)
         .filter((u) => { try { return hosts.includes(new URL(u).hostname); } catch (_) { return false; } }))];
       for (const u of urls) {
         if (!(await cdn.match(u))) { try { await cdn.add(u); } catch (_) {} }
       }
-      const wasm = await caches.match(PYODIDE + 'pyodide.asm.wasm');
-      const packs = await caches.match('paketi.json');
-      if (wasm && packs) { offlineReady = true; $('offlineNote').textContent = t('offOk'); $('offlineNote').classList.remove('hidden'); }
+      const missing = await offlineMissing();
+      offlineReady = !missing.length;
+      $('offlineNote').textContent = offlineReady ? t('offOk') : t('offMissing', { n: missing.length });
+      $('offlineNote').classList.remove('hidden');
     } catch (_) {}
   }
+  // 3.8.1: „spremljeno za rad bez interneta” samo kad je spremljeno SVE što ova verzija treba: stranica,
+  // radnik, svi paketi s popisa, jezgra Pythona i paketi numpy/pillow/tzdata (imena iz pyodide-lock.json)
+  async function offlineMissing() {
+    const need = ['index.html', 'manifest.json', 'pyradnik.js', 'paketi.json'];
+    const list = await caches.match('paketi.json');
+    if (list) { try { need.push(...(await list.clone().json())); } catch (_) { need.push('paketi.json#ispravan'); } }
+    ['pyodide.js', 'pyodide.asm.js', 'pyodide.asm.wasm', 'python_stdlib.zip', 'pyodide-lock.json'].forEach((f) => need.push(PYODIDE + f));
+    const lock = await caches.match(PYODIDE + 'pyodide-lock.json');
+    if (lock) {
+      try {
+        const pk = (await lock.clone().json()).packages || {};
+        ['numpy', 'pillow', 'tzdata'].forEach((n) => need.push(pk[n] && pk[n].file_name ? PYODIDE + pk[n].file_name : 'paket:' + n));
+      } catch (_) { need.push('pyodide-lock.json#ispravan'); }
+    }
+    const missing = [];
+    for (const u of need) { if (!(await caches.match(u))) missing.push(u); }
+    return missing;
+  }
   function start() {
-    boot().catch((err) => {
+    examples();   // 3.8.2: primjeri sličica stižu dok se Python pokreće
+    bootAny().catch((err) => {
       bootFailed = true;
       setEngine('loadErr', 0, null, pyError(err));
       $('engineHint').classList.remove('hidden');
@@ -672,100 +859,173 @@ import skikarta_mobile as M\nM.set_lang(_lang)`);
     for (const [k, v] of Object.entries(vars || {})) py.globals.set(k, v);
     return py.runPython(code);
   }
+  async function execOnce(code, vars, kind) {
+    if (worker) return toWorker({ type: 'run', code, vars, kind });
+    await pause(20);
+    const out = call(code, vars);
+    if (kind === 'pair') { const name = out.get(0), bytes = out.get(1).toJs(); if (out.destroy) out.destroy(); return { name, bytes }; }
+    if (kind === 'text') return out;
+    if (out && out.destroy) out.destroy();
+    return null;
+  }
+  async function loadPack(name) {
+    const t0 = performance.now();
+    if (worker) await toWorker({ type: 'pack', name });
+    else {
+      const res = await fetch(name);
+      if (!res.ok) throw new Error(t('missing') + name + ' (' + res.status + ')');
+      py.globals.set('_pack', await res.text());
+      py.runPython(`
+import base64, json, os, zlib
+for _p, _d in json.loads(_pack).items():
+    _t = os.path.join('/home/pyodide/app', _p)
+    os.makedirs(os.path.dirname(_t), exist_ok=True)
+    with open(_t, 'wb') as _f:
+        _f.write(zlib.decompress(base64.b64decode(_d)))
+del _pack
+import skikarta_maps
+skikarta_maps.packs_changed()`);
+    }
+    diagAdd('⇣ ' + name, performance.now() - t0);
+  }
+  // Python javi „@@PAKET:ime” kad mu treba paket koji još nije učitan; učita se pa se isti poziv ponovi
+  async function exec(code, vars, kind) {
+    const loaded = new Set();
+    for (;;) {
+      try { return await execOnce(code, vars, kind); }
+      catch (err) {
+        const m = /@@PAKET:([\w-]+)/.exec(String((err && err.message) || err));
+        if (!m || loaded.has(m[1]) || loaded.size > 14) throw err;
+        loaded.add(m[1]);
+        await loadPack('paket_' + m[1] + '.json');
+      }
+    }
+  }
+  const J = async (code, vars) => JSON.parse(await exec(code, vars, 'text'));
+  const P = (code, vars) => exec(code, vars, 'pair');
+  const X = (code, vars) => exec(code, vars, 'none');
   async function ask(cmd, extra) {
-    await pause(60);
+    const t0 = performance.now();
+    try { return await askInner(cmd, extra); }
+    finally { diagAdd(cmd, performance.now() - t0); }
+  }
+  // 3.8.2: naredbe koje ne crtaju ne čekaju fontove; sve ostale prvo učitaju paket fontova (jednom)
+  const NO_FONTS = new Set(['analyze', 'analyzeCached', 'dayCache', 'cacheSalt', 'weatherRequest', 'weatherSet', 'hutsRequest',
+    'hutsSet', 'hutsState', 'marksSet', 'dayCheck', 'dayCorrect', 'shareInfo', 'lang', 'zipBegin', 'terrainPlan', 'terrainSet',
+    'here', 'passportClean', 'passportFiles', 'passportRecord', 'photoClear', 'photoState', 'dayPhoto', 'dayPhotoClear',
+    'radarConfig', 'reliefPlan', 'seasonList', 'groupAnalyze', 'tripAnalyze']);
+  let fontsReady = null;
+  function needFonts() {
+    if (!fontsReady) fontsReady = loadPack('paket_fonti.json').catch((err) => { fontsReady = null; throw err; });
+    return fontsReady;
+  }
+  async function askInner(cmd, extra) {
+    if (!worker) await pause(60);
+    if (!NO_FONTS.has(cmd)) await needFonts();
     try {
       if (cmd === 'analyze') {
         const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
-        const info = JSON.parse(call(`import json
+        const info = (await J(`import json
 files = [(str(n), bytes(b.to_py())) for n, b in _files]
 json.dumps(M.analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Zagreb' }));
-        info.styles = JSON.parse(call('import json\njson.dumps(M.styles())'));
+        info.styles = (await J('import json\njson.dumps(M.styles())'));
         return info;
       }
-      if (cmd === 'icon') return JSON.parse(call('import json\njson.dumps(M.icon(_n))', { _n: extra.n }));
-      if (cmd === 'photoSet') return JSON.parse(call('import json\njson.dumps(M.photo_set(bytes(_ph.to_py())))', { _ph: new Uint8Array(extra.buffer) }));
-      if (cmd === 'photoState') return JSON.parse(call('import json\njson.dumps(M.photo_state())'));
-      if (cmd === 'photoClear') { call('M.photo_clear()'); return {}; }
-      if (cmd === 'photoIcon') return JSON.parse(call('import json\njson.dumps(M.photo_icon(_n))', { _n: extra.n }));
+      if (cmd === 'analyzeCached') {   // 3.8.2: zapamćena analiza istih GPX-ova
+        const info = (await J('import json\njson.dumps(M.analyze_cached(_t))', { _t: extra.text }));
+        info.styles = (await J('import json\njson.dumps(M.styles())'));
+        return info;
+      }
+      if (cmd === 'dayCache') return await exec('M.day_cache()', {}, 'text');
+      if (cmd === 'cacheSalt') return await exec('M.cache_key_salt()', {}, 'text');
+      if (cmd === 'icon') return (await J('import json\njson.dumps(M.icon(_n))', { _n: extra.n }));
+      if (cmd === 'photoSet') return (await J('import json\njson.dumps(M.photo_set(bytes(_ph.to_py())))', { _ph: new Uint8Array(extra.buffer) }));
+      if (cmd === 'photoState') return (await J('import json\njson.dumps(M.photo_state())'));
+      if (cmd === 'photoClear') { await X('M.photo_clear()'); return {}; }
+      if (cmd === 'photoIcon') return (await J('import json\njson.dumps(M.photo_icon(_n))', { _n: extra.n }));
       if (cmd === 'photoPoster') {
-        const out = call('M.photo_poster(_n)', { _n: extra.n });
-        const name = out.get(0), bytes = out.get(1).toJs();
-        out.destroy();
-        return { name, bytes };
+        return await P('M.photo_poster(_n)', { _n: extra.n });
       }
       if (cmd === 'tripAnalyze') {
         const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
-        return JSON.parse(call(`import json
+        return (await J(`import json
 files = [(str(n), bytes(b.to_py())) for n, b in _files]
 json.dumps(M.trip_analyze(files, _tz))`, { _files: files, _tz: extra.tz || 'Europe/Zagreb' }));
       }
-      if (cmd === 'lang') return JSON.parse(call('import json\njson.dumps(M.switch_lang(_l))', { _l: extra.lang }));
-      if (cmd === 'zipBegin') { call('M.zip_begin()'); return {}; }
+      if (cmd === 'lang') return (await J('import json\njson.dumps(M.switch_lang(_l))', { _l: extra.lang }));
+      if (cmd === 'zipBegin') { await X('M.zip_begin(_s)', { _s: extra.scope || null }); return {}; }
       if (cmd === 'zipAdd') {
-        if (extra.photo) return JSON.parse(call('import json\njson.dumps(M.zip_add_photo(_n))', { _n: extra.n }));
-        return JSON.parse(extra.trip
-          ? call('import json\njson.dumps(M.zip_add_trip(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' })
-          : call('import json\njson.dumps(M.zip_add_day(_n))', { _n: extra.n }));
+        if (extra.photo) return (await J('import json\njson.dumps(M.zip_add_photo(_n))', { _n: extra.n }));
+        return await (extra.trip
+          ? J('import json\njson.dumps(M.zip_add_trip(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' })
+          : J('import json\njson.dumps(M.zip_add_day(_n))', { _n: extra.n }));
       }
       if (cmd === 'zipFinish') {
-        const out = call('M.zip_finish(_s)', { _s: extra.scope });
-        const name = out.get(0), bytes = out.get(1).toJs();
-        out.destroy();
-        return { name, bytes };
+        return await P('M.zip_finish(_s)', { _s: extra.scope });
       }
-      if (cmd === 'tripIcon') return JSON.parse(call('import json\njson.dumps(M.trip_icon(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' }));
+      if (cmd === 'tripIcon') return (await J('import json\njson.dumps(M.trip_icon(_k, _n, _p))', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' }));
       if (cmd === 'tripPoster') {
-        const out = call('M.trip_poster(_k, _n, _p)', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' });
-        const name = out.get(0), bytes = out.get(1).toJs();
-        out.destroy();
-        return { name, bytes };
+        return await P('M.trip_poster(_k, _n, _p)', { _k: extra.kind, _n: extra.n, _p: extra.piste || '' });
       }
-      if (cmd === 'radarConfig') return JSON.parse(call('import json\njson.dumps(M.radar_config(_s, _g, _n, _t))', { _s: extra.server, _g: extra.group, _n: extra.name, _t: extra.tid || '' }));
-      if (cmd === 'radarMap') return JSON.parse(call('import json\njson.dumps(M.radar_map(_a, _m, _v))', { _a: extra.answer, _m: extra.me || '', _v: extra.view || 'friends' }));
-      if (cmd === 'videoBegin') return JSON.parse(call('import json\njson.dumps(M.video_begin(_s))', { _s: extra.seconds || 20 }));
-      if (cmd === 'videoNext') return JSON.parse(call('import json\njson.dumps(M.video_next(_c))', { _c: extra.count || 10 }));
+      if (cmd === 'radarConfig') return (await J('import json\njson.dumps(M.radar_config(_s, _g, _n, _t))', { _s: extra.server, _g: extra.group, _n: extra.name, _t: extra.tid || '' }));
+      if (cmd === 'radarMap') return (await J('import json\njson.dumps(M.radar_map(_a, _m, _v))', { _a: extra.answer, _m: extra.me || '', _v: extra.view || 'friends' }));
+      if (cmd === 'videoBegin') return (await J('import json\njson.dumps(M.video_begin(_s))', { _s: extra.seconds || 20 }));
+      if (cmd === 'videoNext') return (await J('import json\njson.dumps(M.video_next(_c))', { _c: extra.count || 10 }));
       // 3.6: pasoš, grupni dan, 3D reljef
-      const pair = (code, vars) => { const o = call(code, vars); const name = o.get(0), bytes = o.get(1).toJs(); o.destroy(); return { name, bytes }; };
-      if (cmd === 'passportRecord') return JSON.parse(call('import json\njson.dumps(M.passport_record())'));
-      if (cmd === 'passportClean') return JSON.parse(call('import json\njson.dumps(M._records(_r))', { _r: extra.records }));
+      const pair = (code, vars) => P(code, vars);
+      if (cmd === 'passportRecord') return (await J('import json\njson.dumps(M.passport_record())'));
+      if (cmd === 'passportClean') return (await J('import json\njson.dumps(M._records(_r))', { _r: extra.records }));
       if (cmd === 'passportFiles') {
         const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
-        return JSON.parse(call(`import json
+        return (await J(`import json
 files = [(str(n), bytes(b.to_py())) for n, b in _files]
 json.dumps(M.passport_files(files, _r, _tz))`, { _files: files, _r: extra.records, _tz: extra.tz || 'Europe/Zagreb' }));
       }
-      if (cmd === 'passportView') return JSON.parse(call('import json\njson.dumps(M.passport_view(_r, _s))', { _r: extra.records, _s: extra.slug || '' }));
-      if (cmd === 'passportPoster') return pair('M.passport_poster(_r, _s)', { _r: extra.records, _s: extra.slug });
+      if (cmd === 'passportView') return (await J('import json\njson.dumps(M.passport_view(_r, _s))', { _r: extra.records, _s: extra.slug || '' }));
+      if (cmd === 'passportPoster') return await pair('M.passport_poster(_r, _s, _n)', { _r: extra.records, _s: extra.slug, _n: extra.style || 0 });
       if (cmd === 'groupAnalyze') {
         const files = extra.files.map((f) => [f.name, new Uint8Array(f.buffer)]);
-        return JSON.parse(call(`import json
+        return (await J(`import json
 files = [(str(n), bytes(b.to_py())) for n, b in _files]
 names = [str(x) for x in _names]
 json.dumps(M.group_analyze(files, names, _tz))`, { _files: files, _names: extra.names, _tz: extra.tz || 'Europe/Zagreb' }));
       }
-      if (cmd === 'groupPoster') return pair('M.group_poster()');
-      if (cmd === 'groupDuel') return pair('M.group_duel(_p, _a, _b)', { _p: extra.piste || '', _a: extra.a, _b: extra.b });
-      if (cmd === 'reliefPlan') return JSON.parse(call('import json\njson.dumps(M.relief_plan(_w, _x))', { _w: extra.w, _x: extra.x }));
+      if (cmd === 'groupPoster') return await pair('M.group_poster()');
+      if (cmd === 'groupDuel') return await pair('M.group_duel(_p, _a, _b)', { _p: extra.piste || '', _a: extra.a, _b: extra.b });
+      if (cmd === 'reliefPlan') return (await J('import json\njson.dumps(M.relief_plan(_w, _x))', { _w: extra.w, _x: extra.x }));
       if (cmd === 'reliefBuild') {
         const tiles = extra.tiles.map((q) => [q.z, q.x, q.y, q.w, q.h, q.rgba]);
-        return JSON.parse(call(`import json
+        return (await J(`import json
 tiles = [(int(z), int(x), int(y), int(w), int(h), bytes(b.to_py())) for z, x, y, w, h, b in _tiles]
 json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: extra.x }));
       }
-      if (cmd === 'reliefZip') return pair('M.relief_zip()');
+      if (cmd === 'reliefZip') return await pair('M.relief_zip()');
+      if (cmd === 'terrainPlan') return (await J('import json\njson.dumps(M.terrain_plan())'));
+      if (cmd === 'terrainSet') {
+        const tiles = extra.tiles.map((q) => [q.z, q.x, q.y, q.w, q.h, q.rgba]);
+        return (await J(`import json
+tiles = [(int(z), int(x), int(y), int(w), int(h), bytes(b.to_py())) for z, x, y, w, h, b in _tiles]
+json.dumps(M.terrain_set(tiles))`, { _tiles: tiles }));
+      }
       // 3.7
-      if (cmd === 'weatherRequest') return JSON.parse(call('import json\njson.dumps(M.weather_request())'));
-      if (cmd === 'weatherSet') return JSON.parse(call('import json\nw = M.weather_set(_t)\njson.dumps({"weather": w, "summary": M.summary()})', { _t: extra.text }));
-      if (cmd === 'dayPhoto') return JSON.parse(call('import json\njson.dumps(M.day_photo_add(_n, bytes(_b.to_py()), bytes(_th.to_py()) if _th is not None else None))', { _n: extra.name, _b: extra.bytes, _th: extra.thumb || null }));
-      if (cmd === 'dayPhotoClear') return call('M.day_photo_clear()');
-      if (cmd === 'here') return JSON.parse(call('import json\ntr = [tuple(q) for q in _tr]\njson.dumps(M.here(_la, _lo, _acc, _alt, tr, _now, _v))', { _la: extra.lat, _lo: extra.lon, _acc: extra.acc, _alt: extra.alt, _tr: extra.trail, _now: extra.now, _v: extra.view }));
-      if (cmd === 'seasonList') return JSON.parse(call('import json\njson.dumps(M.season_list(_r))', { _r: extra.records }));
-      if (cmd === 'seasonPoster') return pair('M.season_poster(_r, _k)', { _r: extra.records, _k: extra.key });
-      const out = cmd === 'poster' ? call('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? call('M.day_page()') : call('M.pdf(True)');
-      const name = out.get(0), bytes = out.get(1).toJs();
-      out.destroy();
-      return { name, bytes };
+      if (cmd === 'weatherRequest') return (await J('import json\njson.dumps(M.weather_request())'));
+      if (cmd === 'shareInfo') return (await J('import json\njson.dumps(M.share_info())'));
+      if (cmd === 'sharePage') return await P('M.share_page(_o)', { _o: extra.opts || '{}' });
+      if (cmd === 'dayCheck') return (await J('import json\njson.dumps(M.check_day(_s))', { _s: extra.skip || '[]' }));
+      if (cmd === 'dayCorrect') return (await J('import json\njson.dumps(M.correct_day(_e, _n))', { _e: extra.edits || '[]', _n: extra.note || '' }));
+      if (cmd === 'weatherSet') return (await J('import json\nw = M.weather_set(_t)\njson.dumps({"weather": w, "summary": M.summary()})', { _t: extra.text }));
+      if (cmd === 'dayPhoto') return (await J('import json\njson.dumps(M.day_photo_add(_n, bytes(_b.to_py()), bytes(_th.to_py()) if _th is not None else None))', { _n: extra.name, _b: extra.bytes, _th: extra.thumb || null }));
+      if (cmd === 'dayPhotoClear') return await X('M.day_photo_clear()');
+      if (cmd === 'here') return (await J('import json\ntr = [tuple(q) for q in _tr]\njson.dumps(M.here(_la, _lo, _acc, _alt, tr, _now, _v))', { _la: extra.lat, _lo: extra.lon, _acc: extra.acc, _alt: extra.alt, _tr: extra.trail, _now: extra.now, _v: extra.view }));
+      // 3.8: kolibe (OpenStreetMap) i oznake trenutka
+      if (cmd === 'hutsRequest') return (await J('import json\njson.dumps(M.huts_request())'));
+      if (cmd === 'hutsSet') return (await J('import json\njson.dumps(M.huts_set(_s, _t))', { _s: extra.slug, _t: extra.text }));
+      if (cmd === 'hutsState') return (await J('import json\njson.dumps(M.huts_state())'));
+      if (cmd === 'marksSet') return (await J('import json\njson.dumps(M.marks_set(_t))', { _t: extra.text }));
+      if (cmd === 'progressPoster') return await pair('M.progress_poster(_r)', { _r: extra.records });
+      if (cmd === 'seasonList') return (await J('import json\njson.dumps(M.season_list(_r))', { _r: extra.records }));
+      if (cmd === 'seasonPoster') return await pair('M.season_poster(_r, _k)', { _r: extra.records, _k: extra.key });
+      return await (cmd === 'poster' ? P('M.poster(_n)', { _n: extra.n }) : cmd === 'dayPage' ? P('M.day_page()') : P('M.pdf(True)'));
     } catch (err) {
       throw new Error(pyError(err));
     }
@@ -789,6 +1049,53 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     updateButtons();
   });
 
+  // ---------------------------------------------------------------- 3.8.2: zapamćena analiza (IndexedDB, samo ovaj uređaj)
+  // Ključ je SHA-256 sadržaja GPX-ova + vremenska zona + verzija analize + jezik; čuva se zadnjih ANA_KEEP dana.
+  const ANA_KEEP = 6;
+  let skipCache = false;
+  function anaDb() {
+    return new Promise((ok, no) => {
+      if (!window.indexedDB) { no(new Error('idb')); return; }
+      const r = indexedDB.open('skikarta', 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('analize')) r.result.createObjectStore('analize', { keyPath: 'key' }); };
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); r.onblocked = () => no(new Error('blocked'));
+    });
+  }
+  async function anaKey(payload, tz) {
+    try {
+      if (!(window.crypto && crypto.subtle)) return null;
+      const hex = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+      const parts = [];
+      for (const f of payload) parts.push(hex(await crypto.subtle.digest('SHA-256', f.buffer)));
+      parts.sort();
+      const salt = await ask('cacheSalt');
+      return hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts.join('|') + '|' + tz + '|' + salt)));
+    } catch (_) { return null; }
+  }
+  async function anaGet(key) {
+    try {
+      const db = await anaDb();
+      const rec = await new Promise((ok) => { const q = db.transaction('analize').objectStore('analize').get(key); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); });
+      if (!rec) return null;
+      if (rec.gz && window.DecompressionStream) return await new Response(rec.data.stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      return rec.gz ? null : rec.data;
+    } catch (_) { return null; }
+  }
+  async function anaPut(key, text, label) {
+    try {
+      const gz = !!window.CompressionStream;
+      const data = gz ? await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).blob() : text;
+      const db = await anaDb();
+      await new Promise((ok) => { const tx = db.transaction('analize', 'readwrite'); tx.objectStore('analize').put({ key, t: Date.now(), gz, data, label: label || '' }); tx.oncomplete = ok; tx.onerror = ok; tx.onabort = ok; });
+      const all = await new Promise((ok) => { const q = db.transaction('analize').objectStore('analize').getAll(); q.onsuccess = () => ok(q.result || []); q.onerror = () => ok([]); });
+      const old = all.sort((a, b) => b.t - a.t).slice(ANA_KEEP);
+      if (old.length) { const tx = db.transaction('analize', 'readwrite'); old.forEach((r) => tx.objectStore('analize').delete(r.key)); }
+    } catch (_) {}
+  }
+  async function anaDel(key) {
+    try { const db = await anaDb(); db.transaction('analize', 'readwrite').objectStore('analize').delete(key); } catch (_) {}
+  }
+
   $('analyze').addEventListener('click', async () => {
     busy = true; analyzed = false; updateButtons(); poster = null;
     $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = t('analyzing');
@@ -797,14 +1104,34 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     try {
       const payload = await Promise.all(files.map(async (f) => ({ name: f.name, buffer: await f.arrayBuffer() })));
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zagreb';
-      $('analyzeMsg').textContent = t('analyzingSlow');
-      const info = await ask('analyze', { files: payload, tz });
+      // 3.8.2: isti GPX-ovi (po sadržaju) → zapamćena analiza; analiza se ne ponavlja
+      const key = skipCache ? null : await anaKey(payload, tz);
+      skipCache = false;
+      let info = null, cached = false;
+      if (key) {
+        const text = await anaGet(key);
+        if (text) {
+          try { info = await ask('analyzeCached', { text }); cached = true; } catch (_) { anaDel(key); info = null; }
+        }
+      }
+      if (!info) {
+        $('analyzeMsg').textContent = t('analyzingSlow');
+        info = await ask('analyze', { files: payload, tz });
+        if (key) ask('dayCache').then((text) => anaPut(key, text, info.label)).catch(() => {});
+      }
       lastDay = info; showDay(info); analyzed = true;
       $('analyzeMsg').textContent = '';
+      if (cached) {
+        $('analyzeMsg').textContent = t('fromCache') + ' ';
+        const again = document.createElement('a'); again.href = '#'; again.textContent = t('reAnalyze');
+        again.addEventListener('click', (e) => { e.preventDefault(); skipCache = true; $('analyze').click(); });
+        $('analyzeMsg').append(again);
+      }
       showStyles(info.styles);
       $('photoCard').classList.remove('hidden');
       if (photoLoaded) showPhoto(await ask('photoState'));
-      v37AfterAnalyze();
+      await chkRestore(info.key);   // 3.8.1: spremljeni ispravci ovog dana
+      v37AfterAnalyze().then(v38AfterAnalyze);
     } catch (err) {
       $('analyzeMsg').className = 'msg err'; $('analyzeMsg').textContent = err.message;
     } finally { busy = false; updateButtons(); }
@@ -812,6 +1139,25 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
 
   function showDay(info) {
     pageCache = null; $('dayMap').classList.add('hidden'); $('dayFrame').removeAttribute('srcdoc'); $('showMap').textContent = t('showMap');
+    shOut = null; $('shMap').classList.add('hidden'); $('shareBox').open = false; $('chkBox').open = false;
+    fillDay(info);
+  }
+  // 3.8.1: isti dan s novim podatkom (vrijeme, kolibe, oznake, fotke): osvježi brojke, a otvorena karta
+  // ostaje otvorena, s istim povećanjem i označenim spustom
+  async function mapStale() {
+    pageCache = null; shOut = null;
+    if ($('shareBox').open) shRefresh().catch(() => {});   // 3.8.1: izdanje za dijeljenje prati dan
+    const box = $('dayMap'), frame = $('dayFrame');
+    if (box.classList.contains('hidden')) return;
+    let st = null;
+    try { st = frame.contentWindow && frame.contentWindow.skState ? frame.contentWindow.skState() : null; } catch (_) {}
+    try {
+      const page = await dayPageBytes();
+      await new Promise((ok) => { frame.addEventListener('load', ok, { once: true }); frame.srcdoc = new TextDecoder().decode(page.bytes); setTimeout(ok, 4000); });
+      try { if (st && frame.contentWindow.skRestore) frame.contentWindow.skRestore(st); } catch (_) {}
+    } catch (_) {}
+  }
+  function fillDay(info) {
     $('resort').textContent = info.resort; $('day').textContent = info.day;
     $('tiles').innerHTML = '';
     info.stats.forEach((s, i) => {
@@ -831,14 +1177,34 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     const others = info.other_days || [];
     $('otherDays').textContent = others.length ? t('otherDays', { list: others.join(', ').replace(/\.$/, '') }) : '';
     $('otherDays').classList.toggle('hidden', !others.length); $('asTrip').classList.toggle('hidden', !others.length);
+    // 3.8.1: napomene uvoza (spojeni uređaji, popunjene rupe, kratki dani) vidljive i na webu
+    const warns = info.notes || [], wl = $('dayNotesList'); wl.innerHTML = '';
+    warns.forEach((x) => { const p = document.createElement('div'); p.textContent = x; wl.append(p); });
+    $('dayNotesHead').textContent = t('dayNotes', { n: warns.length }); $('dayNotes').classList.toggle('hidden', !warns.length);
     $('dayCard').classList.remove('hidden'); $('outCard').classList.remove('hidden');
   }
 
+  // 3.8: istaknuti stilovi prvo; ostali pod „Svi stilovi” (sličice se crtaju tek kad se otvore)
+  function moreStyles(box, list, onOpen) {
+    const extra = list.filter((s) => s.featured === false);
+    if (!extra.length) return;
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'ghost allStyles';
+    const label = (open) => (open ? t('stylesFew') : t('stylesAll', { n: list.length }));
+    btn.textContent = label(false);
+    btn.addEventListener('click', () => {
+      const open = btn.dataset.open !== '1'; btn.dataset.open = open ? '1' : '0';
+      box.querySelectorAll('.style.extra').forEach((b) => b.classList.toggle('hidden', !open));
+      btn.textContent = label(open);
+      if (open) onOpen();
+    });
+    box.append(btn);
+  }
+  const shownLeft = (box) => Array.from(box.querySelectorAll('.style')).filter((b) => !b.classList.contains('hidden') && b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
   function showStyles(list) {
     const box = $('styles'); box.innerHTML = '';
     if (!list.some((s) => s.n === chosen)) chosen = 0;
     list.forEach((s) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'style' + (s.n === chosen ? ' on' : ''); b.dataset.n = s.n;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'style' + (s.n === chosen ? ' on' : '') + (s.featured !== false || s.n === chosen ? '' : ' extra hidden'); b.dataset.n = s.n;
       const img = document.createElement('div'); img.className = 'img'; img.textContent = '…';
       const lbl = document.createElement('div'); lbl.className = 'lbl';
       const num = document.createElement('i'); num.textContent = s.n; const nm = document.createElement('span'); nm.textContent = s.name;
@@ -851,9 +1217,28 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
       });
       box.append(b);
     });
+    moreStyles(box, list, () => { iconQueue = shownLeft(box); drawIcons(); });
     $('styleCard').classList.remove('hidden');
-    iconQueue = list.map((s) => s.n);
+    showExamples(box);
+    iconQueue = shownLeft(box);
     drawIcons();
+  }
+  // 3.8.2: primjeri sličica (sintetički dan) vide se odmah; sličica tvog dana zamijeni primjer čim je nacrtana
+  const exampleSets = {};
+  function examples() {
+    if (!exampleSets[lang]) exampleSets[lang] = fetch('primjeri_' + lang + '.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    return exampleSets[lang];
+  }
+  function showExamples(box) {
+    examples().then((ex) => {
+      if (!ex || !ex.dan) return;
+      box.querySelectorAll('.style').forEach((b) => {
+        const img = b.querySelector('.img'), j = ex.dan[b.dataset.n];
+        if (!j || img.dataset.real) return;
+        img.style.backgroundImage = `url(data:image/jpeg;base64,${j})`; img.textContent = '';
+        img.classList.add('ex'); img.dataset.ex = t('example');
+      });
+    });
   }
   // 3.3: sličice koje su na zaslonu crtaju se prve (40 stilova na mobitelu traje; vidljive ne čekaju)
   const onScreen = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
@@ -872,8 +1257,8 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
         const r = await ask('icon', { n });
         if (!el) continue;
         const img = el.querySelector('.img');
-        if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; }
-        else { img.textContent = t('noIcon'); el.disabled = true; el.style.opacity = .5; }
+        if (r.jpeg) { img.style.backgroundImage = `url(data:image/jpeg;base64,${r.jpeg})`; img.textContent = ''; img.dataset.real = '1'; img.classList.remove('ex'); }
+        else { img.style.backgroundImage = ''; img.classList.remove('ex'); img.textContent = t('noIcon'); el.disabled = true; el.style.opacity = .5; }
       } catch (_) { if (el) el.querySelector('.img').textContent = t('iconErr'); }
     }
   }
@@ -905,7 +1290,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     } catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
     finally {
       busy = false; updateButtons();
-      const left = Array.from($('styles').querySelectorAll('.style')).filter((b) => b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
+      const left = shownLeft($('styles'));
       if (left.length) { iconQueue = left; drawIcons(); }
     }
   });
@@ -923,7 +1308,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     const box = $('photoStyles'); box.innerHTML = '';
     if (!state.styles.some((s) => s.n === photoChosen)) photoChosen = 1;
     state.styles.forEach((s) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'style' + (s.n === photoChosen ? ' on' : ''); b.dataset.n = s.n;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'style' + (s.n === photoChosen ? ' on' : '') + (s.featured !== false || s.n === photoChosen ? '' : ' extra hidden'); b.dataset.n = s.n;
       const img = document.createElement('div'); img.className = 'img'; img.textContent = '…';
       const lbl = document.createElement('div'); lbl.className = 'lbl';
       const num = document.createElement('i'); num.textContent = s.n; const nm = document.createElement('span'); nm.textContent = s.name;
@@ -936,8 +1321,9 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
       });
       box.append(b);
     });
+    moreStyles(box, state.styles, () => { photoQueue = shownLeft(box); drawPhotoIcons(); });
     box.classList.remove('hidden'); $('photoRow').classList.remove('hidden');
-    photoQueue = state.styles.map((s) => s.n);
+    photoQueue = shownLeft(box);
     drawPhotoIcons();
   }
   let photoDrawing = false;
@@ -958,7 +1344,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
       }
     } finally { photoDrawing = false; }
   }
-  const leftPhotoIcons = () => Array.from($('photoStyles').querySelectorAll('.style')).filter((b) => b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
+  const leftPhotoIcons = () => shownLeft($('photoStyles'));
   $('photo').addEventListener('change', async (e) => {
     const file = (e.target.files || [])[0];
     if (!file) return;
@@ -1004,7 +1390,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
   // Poster po poster, da se vidi napredak; stil koji za ove podatke ne može nastati samo se preskoči.
   async function zipAll(jobs, scope, msgEl) {
     let done = 0, made = 0;
-    await ask('zipBegin');
+    await ask('zipBegin', { scope });   // 3.8.1: svaki ZIP svoj spremnik
     for (const job of jobs) {
       msgEl.textContent = t('drawingN', { a: done + 1, b: jobs.length });
       await pause(30);
@@ -1026,9 +1412,36 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     catch (err) { $('outMsg').className = 'msg err'; $('outMsg').textContent = err.message; }
     finally {
       busy = false; updateButtons();
-      const left = Array.from($('styles').querySelectorAll('.style')).filter((b) => b.querySelector('.img').textContent === '…').map((b) => +b.dataset.n);
+      const left = shownLeft($('styles'));
       if (left.length) { iconQueue = left; drawIcons(); }
     }
+  });
+
+  // ---------------------------------------------------------------- 3.8: teren za Izohipse (stil 42)
+  $('terrainGet').addEventListener('click', async () => {
+    if (!analyzed || busy) return;
+    busy = true; updateButtons();
+    const msg = $('terrainMsg'); msg.className = 'msg';
+    try {
+      const plan = await ask('terrainPlan');
+      const tiles = [];
+      for (let i = 0; i < plan.tiles.length; i++) {
+        msg.textContent = t('relPlan', { i: i + 1, n: plan.tiles.length });
+        const q = plan.tiles[i];
+        let got;
+        try { got = await tileRgba(q.url); } catch (err) { throw new Error(t('relNet', { why: (err && err.message) || err })); }
+        tiles.push({ z: q.z, x: q.x, y: q.y, w: got.w, h: got.h, rgba: got.rgba });
+      }
+      await ask('terrainSet', { tiles });
+      msg.textContent = t('terrainOk');
+      const b = $('styles').querySelector('[data-n="42"]');
+      if (b) {
+        b.classList.remove('hidden'); b.disabled = false; b.style.opacity = '';
+        const img = b.querySelector('.img'); img.style.backgroundImage = ''; img.textContent = '…';
+        iconQueue = [42].concat(iconQueue.filter((n) => n !== 42));
+      }
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
+    finally { busy = false; updateButtons(); drawIcons(); }
   });
 
   // ---------------------------------------------------------------- poster putovanja i poster staze
@@ -1055,42 +1468,52 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     finally { $('showMap').disabled = false; }
   });
   // 3.3: animirani dan: Python crta sličice (iste kao video na računalu), preglednik ih snima (MediaRecorder)
+  // 3.8.1: sličice se odmah spremaju kao Blob (ne drže se stotine base64 nizova u memoriji), a ponovni
+  // dodir gumba prekida izradu
+  let videoRun = 0, videoSeq = 0;
   $('saveVideo').addEventListener('click', async () => {
-    const msg = $('outMsg'); msg.className = 'msg';
+    const msg = $('outMsg'), btn = $('saveVideo');
+    if (videoRun) { videoRun = 0; return; }
+    msg.className = 'msg';
     const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
     const mime = (window.MediaRecorder && types.find((m) => MediaRecorder.isTypeSupported(m))) || '';
     if (!mime || !HTMLCanvasElement.prototype.captureStream) { msg.className = 'msg err'; msg.textContent = t('videoNo'); return; }
-    $('saveVideo').disabled = true; iconQueue.length = 0;
+    const my = ++videoSeq, label = btn.textContent; videoRun = my; btn.textContent = t('videoStop'); iconQueue.length = 0;
+    const alive = () => { if (videoRun !== my) throw new Error(t('videoStopped')); };
+    let rec = null;
     try {
       const meta = await ask('videoBegin', { seconds: 20 });
-      const jpegs = [];
+      const frames = [];
       for (;;) {
+        alive();
         const r = await ask('videoNext', { count: 15 });
-        r.frames.forEach((b) => jpegs.push(b));
-        msg.textContent = t('videoDraw', { p: Math.round(100 * jpegs.length / meta.frames) });
+        r.frames.forEach((b64) => frames.push(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/jpeg' })));
+        msg.textContent = t('videoDraw', { p: Math.round(100 * frames.length / meta.frames) });
         if (r.done) break;
       }
       const cv = document.createElement('canvas'); cv.width = meta.width; cv.height = meta.height;
       const ctx = cv.getContext('2d');
-      const bitmap = (b64) => createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'image/jpeg' }));
-      ctx.drawImage(await bitmap(jpegs[0]), 0, 0);
-      const rec = new MediaRecorder(cv.captureStream(meta.fps), { mimeType: mime, videoBitsPerSecond: 8000000 });
+      const bitmap = (blob) => createImageBitmap(blob);
+      ctx.drawImage(await bitmap(frames[0]), 0, 0);
+      rec = new MediaRecorder(cv.captureStream(meta.fps), { mimeType: mime, videoBitsPerSecond: 8000000 });
       const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
       const stopped = new Promise((res) => { rec.onstop = res; });
       rec.start();
-      const t0 = performance.now(); let next = await bitmap(jpegs[0]);
-      for (let i = 0; i < jpegs.length; i++) {
-        const frame = next; next = i + 1 < jpegs.length ? bitmap(jpegs[i + 1]) : null;
+      const t0 = performance.now(); let next = await bitmap(frames[0]);
+      for (let i = 0; i < frames.length; i++) {
+        alive();
+        const frame = next; next = i + 1 < frames.length ? bitmap(frames[i + 1]) : null;
         const wait = t0 + i * 1000 / meta.fps - performance.now(); if (wait > 0) await pause(wait);
         ctx.drawImage(frame, 0, 0); if (frame.close) frame.close();
+        frames[i] = null;   // nacrtana sličica više ne treba
         if (next) next = await next;
-        if (i % 15 === 0) msg.textContent = t('videoRec', { p: Math.round(100 * i / jpegs.length) });
+        if (i % 15 === 0) msg.textContent = t('videoRec', { p: Math.round(100 * i / frames.length) });
       }
-      await pause(1000 / meta.fps); rec.stop(); await stopped;
+      await pause(1000 / meta.fps); rec.stop(); await stopped; rec = null;
       const blob = new Blob(chunks, { type: mime.split(';')[0] });
       await save(meta.name + (mime.includes('mp4') ? '.mp4' : '.webm'), new Uint8Array(await blob.arrayBuffer()), mime.split(';')[0], msg);
-    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
-    finally { $('saveVideo').disabled = false; }
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (_) {} }
+    finally { if (videoRun === my) videoRun = 0; btn.textContent = label; }
   });
   $('savePage').addEventListener('click', async () => {
     try { const page = await dayPageBytes(); await save(page.name, page.bytes, 'text/html', $('outMsg')); }
@@ -1138,12 +1561,14 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     $('tripResort').textContent = info.resort; $('tripPeriod').textContent = info.period + ' · ' + t('daysN', { n: info.days.length });
     $('tripTiles').innerHTML = '';
     const tot = info.totals;
-    [[int0(tot.descent) + ' m', t('tVert')], [num1(tot.km) + ' km', t('tSki')],
+    [info.altitude === false ? ['—', t('noAlt')] : [int0(tot.descent) + ' m', t('tVert')], [num1(tot.km) + ' km', t('tSki')],
      [String(tot.runs), t('tRuns')], [num1(tot.max_kmh), t('tTop')]].forEach(([v, l], i) => {
       const d = document.createElement('div'); d.className = 'tile' + (i === 3 ? ' hot' : '');
       const b = document.createElement('b'); b.textContent = v; const sp = document.createElement('span'); sp.textContent = l;
       d.append(b, sp); $('tripTiles').append(d);
     });
+    const notes = info.notes || [];   // 3.8.1: kratki dani i ostaci iza ponoći (što je pridruženo ili izostavljeno)
+    $('tripNotes').textContent = notes.join(' '); $('tripNotes').classList.toggle('hidden', !notes.length);
     const box = $('tripStyles'); box.innerHTML = '';
     info.styles.putovanje.forEach((s) => box.append(tripTile('putovanje', s)));
     const sel = $('tripPiste'); sel.innerHTML = '';
@@ -1441,7 +1866,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
   $('pasMake').addEventListener('click', async () => {
     busy = true; updateButtons(); $('pasOutMsg').className = 'msg'; $('pasOutMsg').textContent = t('drawing');
     try {
-      pasOut = await ask('passportPoster', { records: JSON.stringify(pasLoad()), slug: pasSlug });
+      pasOut = await ask('passportPoster', { records: JSON.stringify(pasLoad()), slug: pasSlug, style: Number($('pasStyle').value) });
       $('pasImg').src = URL.createObjectURL(new Blob([pasOut.bytes], { type: 'image/png' }));
       $('pasPrev').classList.remove('hidden'); $('pasSave').classList.remove('hidden'); $('pasOutMsg').textContent = '';
     } catch (err) { $('pasOutMsg').className = 'msg err'; $('pasOutMsg').textContent = err.message; }
@@ -1507,7 +1932,7 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     $('grpTable').innerHTML = ''; $('grpTable').append(tb);
     const facts = $('grpFacts'); facts.innerHTML = '';
     const line = (text, cls) => { const d = document.createElement('div'); d.textContent = text; if (cls) d.className = cls; d.style.margin = '3px 0'; facts.append(d); };
-    info.pairs.slice(0, 3).forEach((r) => line(t('gTogether', { a: r.a, b: r.b, t: r.together }) + (r.lifts ? t('gLifts', { n: r.lifts }) : '')));
+    info.pairs.slice(0, 3).forEach((r) => line(t('gTogether', { a: r.a, b: r.b, t: r.together }) + (r.compared ? t('gCompared', { t: r.compared }) : '') + (r.lifts ? t('gLifts', { n: r.lifts }) : '')));
     if (info.all_together) line(t('gAll', { t: info.all_together }));
     if (info.duels.length) {
       const h = document.createElement('h3'); h.className = 'sub'; h.textContent = t('gFastest'); facts.append(h);
@@ -1568,8 +1993,9 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     v36Update();
     $('addPassport').disabled = busy || !analyzed;
     $('relMake').disabled = busy || !analyzed;
+    $('terrainGet').disabled = busy || !analyzed;
     $('pasAdd').disabled = !ready || busy || !pasFiles.length;
-    ['pasMake', 'pasExport', 'pasClear'].forEach((id) => { $(id).disabled = busy || !ready; });
+    ['pasMake', 'pasExport', 'pasClear', 'napMake'].forEach((id) => { $(id).disabled = busy || !ready; });
     $('grpAnalyze').disabled = !ready || busy || grpFiles.length < 2;
     ['grpMake', 'grpDuelMake'].forEach((id) => { $(id).disabled = busy || !grpInfo; });
   };
@@ -1592,10 +2018,216 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
       if (!body) throw new Error(navigator.onLine === false ? 'offline' : 'Open-Meteo');
       const out = await ask('weatherSet', { text: body });
       if (id !== wxSeq) return;
-      lastDay = out.summary; showDay(out.summary);
+      lastDay = out.summary; fillDay(out.summary); mapStale();   // 3.8.1: vrijeme ne zatvara kartu
       line.textContent = t('wxSrc', { text: out.weather.text });
     } catch (err) { if (id === wxSeq) line.textContent = t('wxNo', { why: (err && err.message) || err }); }
   }
+
+  // ---------------------------------------------------------------- 3.8.1: izdanje za dijeljenje
+  let shOut = null;
+  function shOpts() {
+    const photos = Array.from(document.querySelectorAll('#shPhotos input[data-name]')).filter((c) => c.checked).map((c) => c.dataset.name);
+    const all = document.querySelectorAll('#shPhotos input[data-name]').length;
+    return JSON.stringify({ cut_m: $('shCut').checked ? 300 : 0, hide_times: $('shClock').checked, hide_heart: $('shHeart').checked,
+      marks: $('shMarks').checked, photos: all ? photos : null });
+  }
+  async function shRefresh() {
+    shOut = null; $('shMap').classList.add('hidden');
+    if (!analyzed || !ready) return;
+    const info = await ask('shareInfo'), box = $('shPhotos'); box.innerHTML = '';
+    $('shHeartRow').classList.toggle('hidden', !info.heart); $('shMarksRow').classList.toggle('hidden', !info.marks);
+    if (info.photos.length) {
+      const h = document.createElement('div'); h.className = 'muted'; h.textContent = t('shPhotosHead'); box.append(h);
+      info.photos.forEach((p) => {
+        const l = document.createElement('label'); l.className = 'shopt';
+        const c = document.createElement('input'); c.type = 'checkbox'; c.checked = true; c.dataset.name = p.name;
+        l.append(c, ' ' + [p.clock, p.name].filter(Boolean).join(' · ')); box.append(l);
+      });
+    }
+  }
+  async function shMake() {
+    const opts = shOpts();
+    if (!shOut || shOut.opts !== opts) shOut = { opts, page: await ask('sharePage', { opts }) };
+    return shOut.page;
+  }
+  $('shareBox').addEventListener('toggle', () => { if ($('shareBox').open) shRefresh().catch(() => {}); });
+  $('shareBox').addEventListener('change', () => { shOut = null; });
+  $('shPreview').addEventListener('click', async () => {
+    const msg = $('shMsg'); msg.className = 'msg'; msg.textContent = t('shBusy');
+    try {
+      const page = await shMake();
+      $('shMap').classList.remove('hidden'); $('shFrame').srcdoc = new TextDecoder().decode(page.bytes);
+      msg.textContent = t('shShown');
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
+  });
+  $('shSave').addEventListener('click', async () => {
+    const msg = $('shMsg'); msg.className = 'msg'; msg.textContent = t('shBusy');
+    try { const page = await shMake(); await save(page.name, page.bytes, 'text/html', msg); }
+    catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
+  });
+
+  // ---------------------------------------------------------------- 3.8.1: „Provjeri moj dan”
+  const CHK = 'skikarta.ispravci.';
+  let chk = { key: '', edits: [], skip: [] };
+  function chkLoad(key) {
+    try {
+      const v = JSON.parse(localStorage.getItem(CHK + key) || 'null');
+      if (v && Array.isArray(v.edits)) return { key, edits: v.edits, skip: Array.isArray(v.skip) ? v.skip : [] };
+    } catch (_) {}
+    return { key, edits: [], skip: [] };
+  }
+  function chkSave() {
+    try {
+      if (!chk.edits.length && !chk.skip.length) localStorage.removeItem(CHK + chk.key);
+      else localStorage.setItem(CHK + chk.key, JSON.stringify({ edits: chk.edits, skip: chk.skip, t: Date.now() }));
+    } catch (_) {}
+  }
+  async function chkApply(note) {
+    const out = await ask('dayCorrect', { edits: JSON.stringify(chk.edits), note });
+    chk.edits = out.edits; chkSave();
+    lastDay = out.summary; fillDay(out.summary); mapStale(); showStyles(out.styles); poster = null;
+    ['preview', 'savePoster'].forEach((id) => $(id).classList.add('hidden'));
+    if (photoLoaded) { try { showPhoto(await ask('photoState')); } catch (_) {} }
+    return out;
+  }
+  async function chkRestore(key) {
+    chk = chkLoad(key); $('chkMsg').textContent = ''; $('chkList').innerHTML = '';
+    if (chk.edits.length) {
+      try {
+        await chkApply(''); $('chkMsg').className = 'msg'; $('chkMsg').textContent = t('chkSaved', { n: chk.edits.length });
+        $('chkBox').open = true;   // vidi se što je primijenjeno i može se poništiti
+      }
+      catch (_) { chk.edits = []; chkSave(); }   // ispravak koji više ne odgovara analizi se odbacuje
+    }
+    if ($('chkBox').open) chkRender().catch(() => {});
+    $('chkUndo').classList.toggle('hidden', !chk.edits.length); $('chkReset').classList.toggle('hidden', !chk.edits.length && !chk.skip.length);
+  }
+  async function chkRender() {
+    const box = $('chkList'), r = await ask('dayCheck', { skip: JSON.stringify(chk.skip) });
+    box.innerHTML = '';
+    if (!r.items.length) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = t('chkNone'); box.append(p); }
+    r.items.forEach((it) => {
+      const d = document.createElement('div'); d.className = 'chk';
+      const b = document.createElement('b'); b.textContent = it.title;
+      const p = document.createElement('div'); p.className = 'muted'; p.textContent = it.what;
+      const row = document.createElement('div'); row.className = 'opts';
+      it.options.forEach((o) => {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.className = o.edit ? 'ghost' : 'ghost muted'; btn.textContent = o.label;
+        btn.addEventListener('click', () => chkChoose(it, o)); row.append(btn);
+      });
+      d.append(b, p, row); box.append(d);
+    });
+    $('chkUndo').classList.toggle('hidden', !chk.edits.length); $('chkReset').classList.toggle('hidden', !chk.edits.length && !chk.skip.length);
+  }
+  async function chkRun(fn) {
+    if (busy || !analyzed) return;
+    busy = true; updateButtons(); iconQueue.length = 0;
+    const msg = $('chkMsg'); msg.className = 'msg'; msg.textContent = t('chkBusy');
+    const keep = { edits: chk.edits.slice(), skip: chk.skip.slice() };
+    try { msg.textContent = await fn(); }
+    catch (err) { chk.edits = keep.edits; chk.skip = keep.skip; chkSave(); msg.className = 'msg err'; msg.textContent = (err && err.message) || String(err); }
+    finally { busy = false; updateButtons(); try { await chkRender(); } catch (_) {} }
+  }
+  function chkChoose(it, o) {
+    chkRun(async () => {
+      if (!o.edit) { chk.skip = chk.skip.concat([it.key]); chkSave(); return t('chkKept'); }
+      chk.edits = chk.edits.concat([o.edit]);
+      const out = await chkApply(o.label);
+      return t('chkDone', { what: o.label, diff: out.diff });
+    });
+  }
+  $('chkBox').addEventListener('toggle', () => { if ($('chkBox').open && analyzed && ready) chkRender().catch((err) => { $('chkMsg').className = 'msg err'; $('chkMsg').textContent = err.message; }); });
+  $('chkUndo').addEventListener('click', () => chkRun(async () => {
+    chk.edits = chk.edits.slice(0, -1);
+    const out = await chkApply('');
+    return t('chkUndone', { diff: out.diff });
+  }));
+  $('chkReset').addEventListener('click', () => chkRun(async () => {
+    chk.edits = []; chk.skip = [];
+    const out = await chkApply('');
+    return t('chkResetDone', { diff: out.diff });
+  }));
+
+  // ---------------------------------------------------------------- 3.8: kolibe uz staze (OpenStreetMap) i ručak
+  let hutSeq = 0;
+  const HUT_DAYS = 30;
+  function hutCache(slug) { try { const c = JSON.parse(localStorage.getItem('skikarta.kolibe.' + slug) || 'null'); return c && c.text ? c : null; } catch (_) { return null; } }
+  async function v38AfterAnalyze() {
+    const id = ++hutSeq, line = $('hutLine');
+    line.textContent = '';
+    try { await marksPush(); } catch (_) {}
+    let why = '';
+    try {
+      const reqs = await ask('hutsRequest');
+      for (const req of reqs) {
+        const old = hutCache(req.slug);
+        let body = old && Date.now() - old.t < HUT_DAYS * 86400e3 ? old.text : null;
+        if (!body) {
+          line.textContent = t('hutLoading');
+          for (const url of [req.url, req.fallback]) {
+            try { const r = await withTimeout(fetch(url), 60000, 'timeout'); if (r.ok) { body = await r.text(); break; } why = 'HTTP ' + r.status; } catch (err) { why = (err && err.message) || String(err); }
+          }
+          if (!body && old) body = old.text;   // bez interneta: zadnji spremljeni popis
+        }
+        if (id !== hutSeq) return;
+        if (!body) continue;
+        const r = await ask('hutsSet', { slug: req.slug, text: body });
+        try { localStorage.setItem('skikarta.kolibe.' + req.slug, JSON.stringify({ t: body === (old && old.text) ? old.t : Date.now(), text: r.keep })); } catch (_) {}
+      }
+      if (id !== hutSeq) return;
+      hutShow(await ask('hutsState'), why);
+    } catch (err) { if (id === hutSeq) line.textContent = t('hutNone', { why: (err && err.message) || err }); }
+  }
+  function hutShow(st, why) {
+    const line = $('hutLine'); line.textContent = '';
+    mapStale();   // 3.8.1: kolibe se dodaju u otvorenu kartu
+    if (!st.count) { if (why) line.textContent = t('hutNone', { why: navigator.onLine === false ? 'offline' : why }); return; }
+    const d = document.createElement('div'); d.textContent = t('hutCount', { n: st.count }); line.append(d);
+    st.meals.forEach((m) => {
+      const p = document.createElement('div'); p.append(t('hutLunch') + ': ');
+      const a = document.createElement('a'); a.href = m.maps; a.target = '_blank'; a.rel = 'noopener'; a.textContent = m.hut; p.append(a);
+      p.append(', ' + m.clock + ' · ' + m.time); line.append(p);
+    });
+  }
+
+  // ---------------------------------------------------------------- 3.8: oznake trenutka
+  const MK_KEY = 'skikarta.oznake';
+  function mkLoad() { try { const v = JSON.parse(localStorage.getItem(MK_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } }
+  function mkSave(list) { try { localStorage.setItem(MK_KEY, JSON.stringify(list)); return true; } catch (_) { return false; } }
+  async function marksPush() {
+    if (!analyzed || !ready) return;
+    const list = mkLoad();
+    await ask('marksSet', { text: JSON.stringify(list) });
+    pageCache = null;
+  }
+  function mkPosition() {
+    if (hereFix && Date.now() / 1000 - hereFix.t < 60) return Promise.resolve({ lat: hereFix.lat, lon: hereFix.lon });
+    return new Promise((ok, no) => navigator.geolocation.getCurrentPosition((p) => ok({ lat: p.coords.latitude, lon: p.coords.longitude }), no, { enableHighAccuracy: true, timeout: 30000, maximumAge: 20000 }));
+  }
+  document.querySelectorAll('[data-mark]').forEach((b) => b.addEventListener('click', async () => {
+    const msg = $('mkMsg'); msg.className = 'msg';
+    if (!('geolocation' in navigator)) { msg.className = 'msg err'; msg.textContent = t('mkNoGeo'); return; }
+    msg.textContent = t('mkWait');
+    try {
+      const pos = await mkPosition(), now = Date.now() / 1000;
+      const list = mkLoad(); list.push({ t: Math.round(now), lat: pos.lat, lon: pos.lon, kind: b.dataset.mark });
+      mkSave(list);
+      const clock = new Date(now * 1000).toTimeString().slice(0, 5);
+      msg.textContent = t('mkSaved', { kind: b.textContent, clock, n: list.length });
+      if (analyzed) { await marksPush(); mapStale(); }
+    } catch (err) { msg.className = 'msg err'; msg.textContent = (err && err.message) || String(err); }
+  }));
+  $('mkExport').addEventListener('click', async () => {
+    const list = mkLoad(), msg = $('mkMsg');
+    if (!list.length) { msg.className = 'msg'; msg.textContent = t('mkNone'); return; }
+    await save('SkiKarta_oznake.json', new TextEncoder().encode(JSON.stringify({ oznake: list }, null, 1)), 'application/json', msg);
+  });
+  $('mkClear').addEventListener('click', async () => {
+    if (!mkLoad().length || !confirm(t('mkAsk'))) return;
+    mkSave([]); $('mkMsg').className = 'msg'; $('mkMsg').textContent = t('mkCleared');
+    try { await marksPush(); } catch (_) {}
+  });
+  setTimeout(() => { const n = mkLoad().length; if (n) $('mkMsg').textContent = t('mkCount', { n }); }, 0);
 
   // ---------------------------------------------------------------- 3.7: fotke na karti dana (JPG i HEIC)
   async function thumbOf(file) {
@@ -1622,13 +2254,13 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
         const r = await ask('dayPhoto', { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()), thumb });
         if (r.ok) { ok.push(r.clock ? r.clock : r.name); if (!r.thumb) noThumb = true; } else bad.push(r.name + ' (' + r.reason + ')');
       }
-      pageCache = null; $('dayMap').classList.add('hidden'); $('showMap').textContent = t('showMap');
+      mapStale();
       msg.textContent = t('dpDone', { ok: ok.length ? ok.length + ' (' + ok.join(', ') + ')' : '0' }) + (bad.length ? t('dpSkip', { list: bad.join('; ') }) : '') + (noThumb ? t('dpNoThumb') : '');
     } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
     finally { busy = false; updateButtons(); }
   });
   $('dpClear').addEventListener('click', async () => {
-    await ask('dayPhotoClear'); pageCache = null; $('dayMap').classList.add('hidden'); $('showMap').textContent = t('showMap');
+    await ask('dayPhotoClear'); mapStale();
     $('dpMsg').className = 'msg'; $('dpMsg').textContent = t('dpCleared');
   });
 
@@ -1702,6 +2334,19 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
   });
   $('seaSave').addEventListener('click', () => seaOut && save(seaOut.name, seaOut.bytes, 'image/png', $('pasOutMsg')));
 
+  // ---------------------------------------------------------------- 3.8: krivulja napretka
+  let napOut = null;
+  $('napMake').addEventListener('click', async () => {
+    busy = true; updateButtons(); $('pasOutMsg').className = 'msg'; $('pasOutMsg').textContent = t('drawing');
+    try {
+      napOut = await ask('progressPoster', { records: JSON.stringify(pasLoad()) });
+      $('napImg').src = URL.createObjectURL(new Blob([napOut.bytes], { type: 'image/png' }));
+      $('napPrev').classList.remove('hidden'); $('napSave').classList.remove('hidden'); $('pasOutMsg').textContent = '';
+    } catch (err) { $('pasOutMsg').className = 'msg err'; $('pasOutMsg').textContent = err.message; }
+    finally { busy = false; updateButtons(); }
+  });
+  $('napSave').addEventListener('click', () => napOut && save(napOut.name, napOut.bytes, 'image/png', $('pasOutMsg')));
+
   // ---------------------------------------------------------------- 3.7: „Podijeli → SkiKarta” (Web Share Target)
   async function takeShared() {
     const q = new URLSearchParams(location.search);
@@ -1709,11 +2354,16 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     history.replaceState(null, '', location.pathname);
     try {
       const cache = await caches.open('skikarta-podijeljeno');
-      const keys = await cache.keys(), got = [];
-      for (const k of keys) {
-        const r = await cache.match(k); const name = decodeURIComponent(new URL(k.url).searchParams.get('ime') || 'zapis.gpx');
-        got.push(new File([await r.blob()], name, { type: 'application/gpx+xml' })); await cache.delete(k);
+      // 3.8.1: samo ova pošiljka (ID u adresi); ime se dekodira jednom (searchParams ga već dekodira, pa „100%.gpx” radi)
+      const id = q.get('podijeljeno'), all = await cache.keys();
+      let mine = all.filter((k) => new URL(k.url).pathname.includes(`/podijeljeno/${id}/`));
+      if (!mine.length && /^\d+$/.test(id)) mine = all.filter((k) => /\/podijeljeno\/\d+-\d+$/.test(new URL(k.url).pathname));  // stari radnik (3.7–3.8)
+      const got = [];
+      for (const k of mine) {
+        const r = await cache.match(k); const name = new URL(k.url).searchParams.get('ime') || 'zapis.gpx';
+        got.push(new File([await r.blob()], name, { type: 'application/gpx+xml' }));
       }
+      for (const k of mine) await cache.delete(k);
       if (!got.length) return;
       files = got; fileNames = got.map((f) => f.name); $('fileList').textContent = fileNames.join(', ');
       $('analyzeMsg').className = 'msg'; $('analyzeMsg').textContent = t('shared', { n: got.length });
@@ -1748,7 +2398,8 @@ json.dumps(M.relief_build(tiles, _w, _x))`, { _tiles: tiles, _w: extra.w, _x: ex
     busy = true; tripBusy = true; updateButtons();
     try {
       const r = await ask('lang', { lang });
-      if (r.day) { lastDay = r.day; showDay(r.day); const wx = (r.day.extras || [])[0]; if ($('wxLine').textContent && wx && /Open-Meteo/.test(wx.label)) $('wxLine').textContent = wx.label + ': ' + wx.value; }
+      if (r.day) { lastDay = r.day; fillDay(r.day); mapStale(); const wx = (r.day.extras || [])[0]; if ($('wxLine').textContent && wx && /Open-Meteo/.test(wx.label)) $('wxLine').textContent = wx.label + ': ' + wx.value; }
+      if (r.day && $('hutLine').textContent) { try { hutShow(await ask('hutsState'), ''); } catch (_) {} }
       if (r.trip) {
         const prev = $('tripPiste').value;
         lastTrip = r.trip; showTrip(r.trip);
